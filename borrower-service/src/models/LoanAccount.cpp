@@ -1,11 +1,12 @@
 #include "../../include/models/LoanAccount.h"
 #include "../../../common/include/exceptions/ValidationException.h"
 
-#include <algorithm>
+#include <algorithm>  
+#include <iomanip>
+#include <sstream>
 
 namespace sdrs::borrower
 {
-
 LoanAccount::LoanAccount(int id, int borrower_id,
                          double loan_amt, double rate)
     : _accountId(id),
@@ -17,7 +18,7 @@ LoanAccount::LoanAccount(int id, int borrower_id,
       _daysPastDue(0),
       _numberOfMissedPayments(0)
 {
-    _createdAt = std::time(nullptr);
+    time(&_createdAt);
     _updatedAt = _createdAt;
 }
 
@@ -54,36 +55,58 @@ int LoanAccount::getMissedPayments() const
     return _numberOfMissedPayments; 
 }
 
+std::string LoanAccount::getCreatedAt() const 
+{ 
+    return formatTime(_createdAt); 
+}
+std::string LoanAccount::getUpdatedAt() const 
+{ 
+    return formatTime(_updatedAt); 
+}
+
 void LoanAccount::updateStatus(AccountStatus newStatus)
 {
     if (!canUpdateStatus(_accountStatus, newStatus))
     {
-        throw sdrs::exceptions::ValidationException("Invalid status transition", "account_status");
+        throw sdrs::exceptions::ValidationException("Invalid status transition", "AccountStatus");
     }
     _accountStatus = newStatus;
-    _updatedAt = std::time(nullptr);
+    time(&_updatedAt);
 }
 
 bool LoanAccount::canUpdateStatus(AccountStatus from, AccountStatus to) const
 {
-    if (from == AccountStatus::OnTime)
-        return to == AccountStatus::Delayed;
-    if (from == AccountStatus::Delayed)
-        return to == AccountStatus::OnTime || to == AccountStatus::Partial;
-    if (from == AccountStatus::Partial)
-        return to == AccountStatus::OnTime || to == AccountStatus::WrittenOff;
-    return false;
+    if (from == to) 
+    {
+        return true;
+    }
+    if (from == AccountStatus::WrittenOff) return false;
+    {
+        return false;
+    }
+    switch (from)
+    {
+        case AccountStatus::OnTime:
+            return to == AccountStatus::Delayed;
+        case AccountStatus::Delayed:
+            return (to == AccountStatus::OnTime || to == AccountStatus::Partial);
+        case AccountStatus::Partial:
+            return (to == AccountStatus::OnTime || to == AccountStatus::WrittenOff);
+        default:
+            return false;
+    }
 }
 
 void LoanAccount::markPaymentMissed()
 {
     _numberOfMissedPayments++;
-    _daysPastDue += 30;
+    _daysPastDue += PAYMENT_CYCLE_DAYS;
     if (_numberOfMissedPayments > 1)
     {
-        updateStatus(AccountStatus::Delayed);
+        if (canUpdateStatus(_accountStatus, AccountStatus::Delayed))
+            _accountStatus = AccountStatus::Delayed;
     }
-    _updatedAt = std::time(nullptr);
+    time(&_updatedAt);
 }
 
 void LoanAccount::recordPayment(double amount)
@@ -92,14 +115,30 @@ void LoanAccount::recordPayment(double amount)
     {
         throw sdrs::exceptions::ValidationException("Amount cannot be negative", "payment_amount");
     }
-
     if (amount > _remainingAmount)
     {
         throw sdrs::exceptions::ValidationException("Payment exceeds remaining balance", "payment_amount");
     }
-
+    double prevRemaining = _remainingAmount;
     _remainingAmount -= amount;
-    _updatedAt = std::time(nullptr);
+    if (_remainingAmount <= 0.0)
+    {
+        if (canUpdateStatus(_accountStatus, AccountStatus::WrittenOff))
+            _accountStatus = AccountStatus::WrittenOff;
+        _daysPastDue = 0;
+        _numberOfMissedPayments = 0;
+    }
+    else
+    {
+        if (canUpdateStatus(_accountStatus, AccountStatus::OnTime))
+        {
+            _accountStatus = AccountStatus::OnTime;
+            _daysPastDue = 0;
+            _numberOfMissedPayments = 0;
+        }
+    }
+
+    time(&_updatedAt);
 }
 
 void LoanAccount::incrementDaysPastDue(int days)
@@ -107,7 +146,7 @@ void LoanAccount::incrementDaysPastDue(int days)
     if (days > 0)
     {
         _daysPastDue += days;
-        _updatedAt = std::time(nullptr);
+        time(&_updatedAt);
     }
 }
 
@@ -129,10 +168,10 @@ std::string LoanAccount::validate() const
     if (_loanAmount <= 0) 
     {
         return "Loan amount must be positive";
-    }   
-    if (_interestRate < 0 || _interestRate > 1)
-    {       
-        return "Interest rate can not be under 0 or above 1";
+    }
+    if (_interestRate < 0 || _interestRate > 1) 
+    {
+        return "Interest rate can not be under 0% or above 100%";
     }
     return "";
 }
@@ -141,46 +180,52 @@ std::string LoanAccount::statusToString(AccountStatus status)
 {
     switch (status)
     {
-    case AccountStatus::OnTime:      
-    {
+        case AccountStatus::OnTime:      
         return "On-Time";
-    }
-    case AccountStatus::Delayed:
-    {
+        case AccountStatus::Delayed:     
         return "Delayed";
-    }      
-    case AccountStatus::Partial:     
-    {
+        case AccountStatus::Partial:     
         return "Partially Recovered";
-    }
-    case AccountStatus::WrittenOff:  
-    {
+        case AccountStatus::WrittenOff:  
         return "Written-off";
+        default:                         
+        return "Unknown";
     }
-    }
-    return "Unknown";
 }
 
 AccountStatus LoanAccount::stringToStatus(const std::string& str)
 {
-    std::string lower = str;
-    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-    if (lower == "on-time") 
+    if (str == "On-Time") 
     {
         return AccountStatus::OnTime;
     }
-    if (lower == "delayed") 
+    if (str == "Delayed") 
     {
-        return AccountStatus::Delayed;  
+        return AccountStatus::Delayed;
     }
-    if (lower == "partially recovered") 
+    if (str == "Partially Recovered")   
     {
         return AccountStatus::Partial;
     }
-    if (lower == "written-off") 
+    if (str == "Written-off") 
     {
         return AccountStatus::WrittenOff;
-    }   
-    throw sdrs::exceptions::ValidationException("Unknown status string", "account_status");
+    }
+    throw sdrs::exceptions::ValidationException("Unknown status string", "AccountStatus");
 }
+
+std::string LoanAccount::formatTime(time_t t)
+{
+    if (t == 0) return "";
+    std::tm tm{};
+#if defined(_WIN32) || defined(_WIN64)
+    gmtime_s(&tm, &t); 
+#else
+    gmtime_r(&t, &tm); 
+#endif
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
+    return oss.str();
 }
+
+} 

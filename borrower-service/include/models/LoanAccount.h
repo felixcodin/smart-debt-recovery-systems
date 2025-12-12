@@ -17,7 +17,6 @@ enum class AccountStatus
 
 class LoanAccount
 {
-
 private:
     int _accountId = 0;
     int _borrowerId = 0;
@@ -29,6 +28,10 @@ private:
     int _numberOfMissedPayments = 0;
     time_t _createdAt = 0;
     time_t _updatedAt = 0;
+    static constexpr int PAYMENT_CYCLE_DAYS = 30;
+
+private:
+    static std::string formatTime(time_t t);
 
 public:
     LoanAccount(int id = 0, int borrower_id = 0,double loan_amt = 0, double rate = 0);
@@ -42,6 +45,8 @@ public:
     AccountStatus getStatus() const;
     int getDaysPastDue() const;
     int getMissedPayments() const;
+    std::string getCreatedAt() const;
+    std::string getUpdatedAt() const;
 
 public:
     void updateStatus(AccountStatus newStatus);
@@ -55,8 +60,8 @@ public:
     std::string validate() const;
     static std::string statusToString(AccountStatus status);
     static AccountStatus stringToStatus(const std::string& str);
-};
 
+};
 }
 
 #endif
