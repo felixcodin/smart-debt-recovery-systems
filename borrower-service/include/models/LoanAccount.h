@@ -2,45 +2,59 @@
 #define SDRS_BORROWER_LOANACCOUNT_H
 
 #include <string>
+#include <ctime>
 
-namespace sdrs::borrower 
+namespace sdrs::borrower
 {
+
+enum class AccountStatus
+{
+    OnTime,
+    Delayed,
+    Partial,
+    WrittenOff
+};
+
 class LoanAccount
 {
+
 private:
-    int _accountId;
-    int _borrowerId;
-    double _loanAmount;
-    double _remainingAmount;
-    double _interestRate;
-    int _numberOfMissedPayments = 0;
+    int _accountId = 0;
+    int _borrowerId = 0;
+    double _loanAmount = 0;
+    double _remainingAmount = 0;
+    double _interestRate = 0;
+    AccountStatus _accountStatus = AccountStatus::OnTime;
     int _daysPastDue = 0;
-    std::string _accountStatus = STATUS_ON_TIME;
+    int _numberOfMissedPayments = 0;
+    time_t _createdAt = 0;
+    time_t _updatedAt = 0;
 
 public:
-    static inline const std::string STATUS_ON_TIME     = "ON_TIME";
-    static inline const std::string STATUS_DELAYED     = "DELAYED";
-    static inline const std::string STATUS_PARTIAL     = "PARTIAL";
-    static inline const std::string STATUS_WRITTEN_OFF = "WRITTEN_OFF";
-    LoanAccount(int id, int borrower_id, double loan_amt, double rate);
-
-public:
-    void updateStatus(const std::string& new_status);
-    void markPaymentMissed();
-    void recordPayment(double amount);
+    LoanAccount(int id = 0, int borrower_id = 0,double loan_amt = 0, double rate = 0);
 
 public:
     int getAccountId() const;
-    int getBorrowerId() const; 
+    int getBorrowerId() const;
     double getLoanAmount() const;
     double getRemainingAmount() const;
     double getInterestRate() const;
-    int getMissedPayments() const;
+    AccountStatus getStatus() const;
     int getDaysPastDue() const;
-    const std::string& getStatus() const;
+    int getMissedPayments() const;
 
-private:
-    bool canUpdateStatus(const std::string& from_status, const std::string& to_status) const;
+public:
+    void updateStatus(AccountStatus newStatus);
+    bool canUpdateStatus(AccountStatus fromStatus, AccountStatus toStatus) const;
+    void markPaymentMissed();
+    void recordPayment(double amount);
+    void incrementDaysPastDue(int days);
+
+public:
+    bool isValid() const;
+    std::string validate() const;
+    static std::string statusToString(AccountStatus status);
+    static AccountStatus stringToStatus(const std::string& str);
 };
 
 }

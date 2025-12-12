@@ -1,139 +1,186 @@
 #include "../../include/models/LoanAccount.h"
 #include "../../../common/include/exceptions/ValidationException.h"
 
-namespace sdrs::borrower 
+#include <algorithm>
+
+namespace sdrs::borrower
 {
-LoanAccount::LoanAccount(int id,
-    int borrower_id,double loan_amt, double rate):
-    _accountId(id),
-    _borrowerId(borrower_id),
-    _loanAmount(loan_amt),
-    _remainingAmount(loan_amt),
-    _interestRate(rate),
-    _accountStatus(STATUS_ON_TIME) 
+
+LoanAccount::LoanAccount(int id, int borrower_id,
+                         double loan_amt, double rate)
+    : _accountId(id),
+      _borrowerId(borrower_id),
+      _loanAmount(loan_amt),
+      _remainingAmount(loan_amt),
+      _interestRate(rate),
+      _accountStatus(AccountStatus::OnTime),
+      _daysPastDue(0),
+      _numberOfMissedPayments(0)
 {
-    if (id <= 0) 
-    {
-        throw sdrs::exceptions::ValidationException("Invalid account ID", "account_id");
-    }
-
-    if (borrower_id <= 0) 
-    {
-        throw sdrs::exceptions::ValidationException("Invalid borrower ID", "borrower_id");
-    }
-
-    if (loan_amt <= 0) 
-    {
-        throw sdrs::exceptions::ValidationException("Loan amount must be greater than zero", "loan_amount");
-    }
-
-    if (rate < 0) 
-    {
-        throw sdrs::exceptions::ValidationException("Interest rate cannot be negative", "interest_rate");
-    }
-
-    if (rate > 1.0) 
-    {
-        throw sdrs::exceptions::ValidationException("Interest rate exceeds allowed maximum", "interest_rate");
-    }
-
-    _numberOfMissedPayments = 0;
-    _daysPastDue = 0;
+    _createdAt = std::time(nullptr);
+    _updatedAt = _createdAt;
 }
 
+int LoanAccount::getAccountId() const 
+{ 
+    return _accountId; 
+}
+int LoanAccount::getBorrowerId() const 
+{ 
+    return _borrowerId; 
+}
+double LoanAccount::getLoanAmount() const 
+{ 
+    return _loanAmount; 
+}
+double LoanAccount::getRemainingAmount() const 
+{ 
+    return _remainingAmount; 
+}
+double LoanAccount::getInterestRate() const 
+{ 
+    return _interestRate; 
+}
+AccountStatus LoanAccount::getStatus() const 
+{ 
+    return _accountStatus; 
+}
+int LoanAccount::getDaysPastDue() const 
+{ 
+    return _daysPastDue; 
+}
+int LoanAccount::getMissedPayments() const 
+{ 
+    return _numberOfMissedPayments; 
+}
 
-void LoanAccount::updateStatus(const std::string& new_status)
+void LoanAccount::updateStatus(AccountStatus newStatus)
 {
-    if (!canUpdateStatus(_accountStatus, new_status)) 
+    if (!canUpdateStatus(_accountStatus, newStatus))
     {
-        throw sdrs::exceptions::ValidationException(
-            "Invalid status transition", "account_status"
-        );
+        throw sdrs::exceptions::ValidationException("Invalid status transition", "account_status");
     }
-    _accountStatus = new_status;
+    _accountStatus = newStatus;
+    _updatedAt = std::time(nullptr);
+}
+
+bool LoanAccount::canUpdateStatus(AccountStatus from, AccountStatus to) const
+{
+    if (from == AccountStatus::OnTime)
+        return to == AccountStatus::Delayed;
+    if (from == AccountStatus::Delayed)
+        return to == AccountStatus::OnTime || to == AccountStatus::Partial;
+    if (from == AccountStatus::Partial)
+        return to == AccountStatus::OnTime || to == AccountStatus::WrittenOff;
+    return false;
 }
 
 void LoanAccount::markPaymentMissed()
 {
     _numberOfMissedPayments++;
     _daysPastDue += 30;
-
-    if (_numberOfMissedPayments > 1) 
+    if (_numberOfMissedPayments > 1)
     {
-        updateStatus(STATUS_DELAYED);
+        updateStatus(AccountStatus::Delayed);
     }
+    _updatedAt = std::time(nullptr);
 }
 
-void LoanAccount::recordPayment(double amount) 
+void LoanAccount::recordPayment(double amount)
 {
-    if (amount < 0) 
+    if (amount < 0)
     {
         throw sdrs::exceptions::ValidationException("Amount cannot be negative", "payment_amount");
     }
-    if (amount > _remainingAmount) 
+
+    if (amount > _remainingAmount)
     {
         throw sdrs::exceptions::ValidationException("Payment exceeds remaining balance", "payment_amount");
     }
+
     _remainingAmount -= amount;
+    _updatedAt = std::time(nullptr);
 }
 
-bool LoanAccount::canUpdateStatus(const std::string& from_status,const std::string& to_status) const 
+void LoanAccount::incrementDaysPastDue(int days)
 {
-
-    if (from_status == STATUS_ON_TIME) 
+    if (days > 0)
     {
-        return to_status == STATUS_DELAYED;
+        _daysPastDue += days;
+        _updatedAt = std::time(nullptr);
     }
-    if (from_status == STATUS_DELAYED) {
-        return to_status == STATUS_ON_TIME || to_status == STATUS_PARTIAL;
-    }
-    if (from_status == STATUS_PARTIAL) 
+}
+
+bool LoanAccount::isValid() const
+{
+    return validate().empty();
+}
+
+std::string LoanAccount::validate() const
+{
+    if (_accountId <= 0) 
     {
-        return to_status == STATUS_ON_TIME || to_status == STATUS_WRITTEN_OFF;
+        return "Invalid account ID";
     }
-    return false;
+    if (_borrowerId <= 0) 
+    {
+        return "Invalid borrower ID";
+    }
+    if (_loanAmount <= 0) 
+    {
+        return "Loan amount must be positive";
+    }   
+    if (_interestRate < 0 || _interestRate > 1)
+    {       
+        return "Interest rate can not be under 0 or above 1";
+    }
+    return "";
 }
 
-
-int LoanAccount::getAccountId() const 
+std::string LoanAccount::statusToString(AccountStatus status)
 {
-    return _accountId;
+    switch (status)
+    {
+    case AccountStatus::OnTime:      
+    {
+        return "On-Time";
+    }
+    case AccountStatus::Delayed:
+    {
+        return "Delayed";
+    }      
+    case AccountStatus::Partial:     
+    {
+        return "Partially Recovered";
+    }
+    case AccountStatus::WrittenOff:  
+    {
+        return "Written-off";
+    }
+    }
+    return "Unknown";
 }
 
-int LoanAccount::getBorrowerId() const 
+AccountStatus LoanAccount::stringToStatus(const std::string& str)
 {
-    return _borrowerId;
+    std::string lower = str;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    if (lower == "on-time") 
+    {
+        return AccountStatus::OnTime;
+    }
+    if (lower == "delayed") 
+    {
+        return AccountStatus::Delayed;  
+    }
+    if (lower == "partially recovered") 
+    {
+        return AccountStatus::Partial;
+    }
+    if (lower == "written-off") 
+    {
+        return AccountStatus::WrittenOff;
+    }   
+    throw sdrs::exceptions::ValidationException("Unknown status string", "account_status");
 }
-
-double LoanAccount::getLoanAmount() const 
-{
-    return _loanAmount;
 }
-
-double LoanAccount::getRemainingAmount() const 
-{
-    return _remainingAmount;
-}
-
-double LoanAccount::getInterestRate() const 
-{
-    return _interestRate;
-}
-
-int LoanAccount::getMissedPayments() const 
-{
-    return _numberOfMissedPayments;
-}
-
-int LoanAccount::getDaysPastDue() const 
-{
-    return _daysPastDue;
-}
-
-const std::string& LoanAccount::getStatus() const 
-{
-    return _accountStatus;
-}
-
-}   
-
