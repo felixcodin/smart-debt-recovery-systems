@@ -10,67 +10,73 @@ namespace sdrs::borrower
 void LoanAccount::validateConstructorArgs(int accountId,int borrowerId,double loanAmount,double interestRate) const
 {
     if (accountId <= 0)
-    {
-        throw sdrs::exceptions::ValidationException("Invalid account id","accountId");
-    }
+        throw sdrs::exceptions::ValidationException("Invalid account id", "accountId");
     if (borrowerId <= 0)
-    {
-        throw sdrs::exceptions::ValidationException("Invalid borrower id","borrowerId");
-    }
+        throw sdrs::exceptions::ValidationException("Invalid borrower id", "borrowerId");
     if (loanAmount <= 0 || std::isnan(loanAmount))
-    {
-        throw sdrs::exceptions::ValidationException("Loan amount must be positive","loanAmount");
-    }
-
+        throw sdrs::exceptions::ValidationException("Loan amount must be positive", "loanAmount");
     if (interestRate < 0 || interestRate > 1)
-    {
-        throw sdrs::exceptions::ValidationException("Interest rate must be between 0 and 1","interestRate");
-    }
+        throw sdrs::exceptions::ValidationException("Interest rate must be between 0 and 1", "interestRate");
 }
 
-LoanAccount::LoanAccount(int accountId,int borrowerId, double loanAmount,double interestRate): 
+LoanAccount::LoanAccount(int accountId,int borrowerId,double loanAmount,double interestRate): 
     _accountId(accountId),
     _borrowerId(borrowerId),
     _loanAmount(loanAmount),
+    _initialAmount(loanAmount),
     _remainingAmount(loanAmount),
     _interestRate(interestRate)
 {
     validateConstructorArgs(accountId, borrowerId, loanAmount, interestRate);
-    _createdAt = std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now());
+    _loanStartDate = std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now());
+    _loanEndDate = _loanStartDate + std::chrono::years{1};
+    _createdAt = _loanStartDate;
     _updatedAt = _createdAt;
 }
 
-int LoanAccount::getAccountId() const
-{
-    return _accountId;
+int LoanAccount::getAccountId() const 
+{ 
+    return _accountId; 
 }
-int LoanAccount::getBorrowerId() const
-{
-    return _borrowerId;
+int LoanAccount::getBorrowerId() const 
+{ 
+    return _borrowerId; 
 }
-double LoanAccount::getLoanAmount() const
-{
-    return _loanAmount;
+double LoanAccount::getLoanAmount() const 
+{ 
+    return _loanAmount; 
 }
-double LoanAccount::getRemainingAmount() const
-{
-    return _remainingAmount;
+double LoanAccount::getInitialAmount() const 
+{ 
+    return _initialAmount; 
 }
-double LoanAccount::getInterestRate() const
-{
-    return _interestRate;
+double LoanAccount::getRemainingAmount() const 
+{ 
+    return _remainingAmount; 
 }
-AccountStatus LoanAccount::getStatus() const
-{
-    return _accountStatus;
+double LoanAccount::getInterestRate() const 
+{ 
+    return _interestRate; 
 }
-int LoanAccount::getDaysPastDue() const
-{
-    return _daysPastDue;
+AccountStatus LoanAccount::getStatus() const 
+{ 
+    return _accountStatus; 
 }
-int LoanAccount::getMissedPayments() const
+int LoanAccount::getDaysPastDue() const 
+{ 
+    return _daysPastDue; 
+}
+int LoanAccount::getMissedPayments() const 
+{ 
+    return _numberOfMissedPayments; 
+}
+std::chrono::sys_seconds LoanAccount::getLoanStartDate() const
 {
-    return _numberOfMissedPayments;
+    return _loanStartDate;
+}
+std::chrono::sys_seconds LoanAccount::getLoanEndDate() const
+{
+    return _loanEndDate;
 }
 std::chrono::sys_seconds LoanAccount::getCreatedAt() const
 {
@@ -79,6 +85,14 @@ std::chrono::sys_seconds LoanAccount::getCreatedAt() const
 std::chrono::sys_seconds LoanAccount::getUpdatedAt() const
 {
     return _updatedAt;
+}
+bool LoanAccount::isValidAmounts() const
+{
+    return _validAmounts;
+}
+bool LoanAccount::isValidInterest() const
+{
+    return _validInterest;
 }
 
 bool LoanAccount::canUpdateStatus(AccountStatus fromStatus,AccountStatus toStatus) const
@@ -108,7 +122,7 @@ void LoanAccount::updateStatus(AccountStatus newStatus)
 {
     if (!canUpdateStatus(_accountStatus, newStatus))
     {
-        throw sdrs::exceptions::ValidationException("Invalid account status transition","accountStatus");
+        throw sdrs::exceptions::ValidationException("Invalid account status transition", "accountStatus");
     }
     _accountStatus = newStatus;
     _updatedAt = std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now());
@@ -125,11 +139,13 @@ void LoanAccount::recordPayment(double amount)
 {
     if (amount <= 0)
     {
-        throw sdrs::exceptions::ValidationException("Payment amount must be positive","paymentAmount");
+        _validAmounts = false;
+        throw sdrs::exceptions::ValidationException("Payment amount must be positive", "paymentAmount");
     }
     if (amount > _remainingAmount)
     {
-        throw sdrs::exceptions::ValidationException("Payment exceeds remaining amount","paymentAmount");
+        _validAmounts = false;
+        throw sdrs::exceptions::ValidationException("Payment exceeds remaining amount", "paymentAmount");
     }
     _remainingAmount -= amount;
     if (_remainingAmount == 0)
@@ -157,7 +173,7 @@ void LoanAccount::incrementDaysPastDue(int days)
 
 std::string LoanAccount::toJson() const
 {
-    auto formatTime = [](const std::chrono::sys_seconds& time) -> std::string
+    auto formatTime = [](const std::chrono::sys_seconds& time)
     {
         return std::format("{:%Y-%m-%dT%H:%M:%SZ}", time);
     };
@@ -166,13 +182,18 @@ std::string LoanAccount::toJson() const
         << "\"accountId\":" << _accountId << ","
         << "\"borrowerId\":" << _borrowerId << ","
         << "\"loanAmount\":" << _loanAmount << ","
+        << "\"initialAmount\":" << _initialAmount << ","
         << "\"remainingAmount\":" << _remainingAmount << ","
         << "\"interestRate\":" << _interestRate << ","
         << "\"status\":\"" << statusToString(_accountStatus) << "\","
         << "\"daysPastDue\":" << _daysPastDue << ","
         << "\"missedPayments\":" << _numberOfMissedPayments << ","
+        << "\"loanStartDate\":\"" << formatTime(_loanStartDate) << "\","
+        << "\"loanEndDate\":\"" << formatTime(_loanEndDate) << "\","
         << "\"createdAt\":\"" << formatTime(_createdAt) << "\","
-        << "\"updatedAt\":\"" << formatTime(_updatedAt) << "\""
+        << "\"updatedAt\":\"" << formatTime(_updatedAt) << "\","
+        << "\"validAmounts\":" << (_validAmounts ? "true" : "false") << ","
+        << "\"validInterest\":" << (_validInterest ? "true" : "false")
         << "}";
     return oss.str();
 }
@@ -204,6 +225,6 @@ AccountStatus LoanAccount::stringToStatus(const std::string& statusStr)
         return AccountStatus::Partial;
     if (statusStr == "Written-off")
         return AccountStatus::WrittenOff;
-    throw sdrs::exceptions::ValidationException("Unknown account status string","accountStatus");
+    throw sdrs::exceptions::ValidationException("Unknown account status string", "accountStatus");
 }
-}
+} 
