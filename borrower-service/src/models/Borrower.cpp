@@ -3,6 +3,7 @@
 
 #include <regex>
 #include <cmath>
+#include <sstream>
 
 namespace sdrs::borrower
 {
@@ -13,9 +14,12 @@ Borrower::Borrower(int id,
     : _id(id), _firstName(fname), _lastName(lname)
 {
     _isActive = true;
-    time(&_createdAt);
-    time(&_updatedAt);
-
+    _createdAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
+    _updatedAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
 }
 
 void Borrower::setEmail(const std::string& email)
@@ -27,7 +31,9 @@ void Borrower::setEmail(const std::string& email)
         throw sdrs::exceptions::ValidationException("Invalid email format: ", "email");
     }
     _email = email;
-    time(&_updatedAt);
+    _updatedAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
 }
 
 void Borrower::setMonthlyIncome(double income)
@@ -43,21 +49,37 @@ void Borrower::setMonthlyIncome(double income)
     }
 
     _monthlyIncome = income;
-    time(&_updatedAt);
+    _updatedAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
 }
 
 void Borrower::setActive()
 {
     _isActive = true;
-    time(&_updatedAt);
+    _updatedAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
 }
 
 void Borrower::setInactive(InactiveReason reason)
 {
     _isActive = false;
     _inactiveReason = reason;
-    time(&_inactivatedAt);
-    time(&_updatedAt);
+    _inactivatedAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
+    _updatedAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
+}
+
+void Borrower::setEmploymentStatus(EmploymentStatus status)
+{
+    _employmentStatus = status;
+    _updatedAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
 }
 
 InactiveReason Borrower::getInactiveReason() const
@@ -85,6 +107,16 @@ std::string Borrower::getFullName() const
     return _firstName + " " + _lastName;
 }
 
+std::chrono::sys_seconds Borrower::getInactiveAt() const
+{
+    return _inactivatedAt;
+}
+
+EmploymentStatus Borrower::getEmploymentStatus() const
+{
+    return _employmentStatus;
+}
+
 bool Borrower::isActive() const
 {
     return _isActive;
@@ -95,12 +127,12 @@ bool Borrower::canContact() const
     return !_email.empty() && _isActive;
 }
 
-time_t Borrower::getCreatedAt() const
+std::chrono::sys_seconds Borrower::getCreatedAt() const
 {
     return _createdAt;
 }
 
-time_t Borrower::getUpdatedAt() const
+std::chrono::sys_seconds Borrower::getUpdatedAt() const
 {
     return _updatedAt;
 }
@@ -151,5 +183,105 @@ bool Borrower::hasCompleteProfile() const
         && (!_lastName.empty())
         && (!_email.empty());
 }
+
+void Borrower::setPhoneNumber(const std::string& phoneNumber)
+{
+    std::regex phoneNumberPattern(R"(^[0-9]{10,11}$)");
+
+    if (!std::regex_match(phoneNumber, phoneNumberPattern))
+    {
+        throw sdrs::exceptions::ValidationException("Invalid phone number format", "phoneNumber");
+    }
+    _phoneNumber = phoneNumber;
+    _updatedAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
+}
+
+std::string Borrower::getPhoneNumber() const
+{
+    return _phoneNumber;
+}
+
+double Borrower::getMonthlyIncome() const
+{
+    return _monthlyIncome;
+}
+
+void Borrower::setAddress(const std::string& address)
+{
+    _address = address;
+    _updatedAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
+}
+
+std::string Borrower::getAddress() const
+{
+    return _address;
+}
+
+void Borrower::setFirstName(const std::string& fname)
+{
+    _firstName = fname;
+    _updatedAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
+}
+
+void Borrower::setLastName(const std::string& lname)
+{
+    _lastName = lname;
+    _updatedAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
+}
+
+std::chrono::year_month_day Borrower::getDateOfBirth() const
+{
+    return std::chrono::year_month_day{_dateOfBirth};
+}
+
+void Borrower::setDateOfBirth(const std::string& dobString)
+{
+    std::istringstream iss(dobString);
+    std::chrono::sys_days tmp;
+
+    std::chrono::from_stream(iss, "%Y-%m-%d", tmp);
+
+    if (iss.fail())
+    {
+        throw sdrs::exceptions::ValidationException("Invalid date format. Expected YYYY-MM-DD", "dateOfBirth");
+    }
+
+    _dateOfBirth = tmp;
+    _updatedAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
+}
+
+std::string Borrower::toJson() const
+{
+    std::ostringstream oss;
+    oss << "{"
+        << "\"id\":" << _id << ","
+        << "\"firstName\":\"" << _firstName << "\","
+        << "\"lastName\":\"" << _lastName << "\","
+        << "\"email\":\"" << _email << "\","
+        << "\"isActive\":" << (_isActive ? "true" : "false")
+        << "}";
+
+    return oss.str();
+}
+
+/*
+Borrower Borrower::fromJson(const std::string& json)
+{
+    // TODO:
+    // Parser JSON string
+    // Extract fields
+    // Create and return Borrower object
+}
+*/
 
 }
