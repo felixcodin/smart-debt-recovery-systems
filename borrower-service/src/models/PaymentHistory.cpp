@@ -1,9 +1,11 @@
 #include "../../include/models/PaymentHistory.h"
+#include "../../../common/include/models/Money.h"
 #include "../../../common/include/exceptions/ValidationException.h"
 
 #include <sstream>
 #include <chrono>
 #include <string>
+
 namespace sdrs::borrower
 {
 
@@ -14,7 +16,7 @@ void PaymentHistory::touch()
 
 PaymentHistory::PaymentHistory(int paymentId,
                                int accountId,
-                               double paymentAmount,
+                               const sdrs::money::Money& paymentAmount,
                                PaymentMethod method,
                                std::chrono::sys_days paymentDate,
                                std::optional<std::chrono::sys_days> dueDate):
@@ -45,7 +47,7 @@ int PaymentHistory::getAccountId() const
     return _accountId;
 }
 
-double PaymentHistory::getPaymentAmount() const
+const sdrs::money::Money& PaymentHistory::getPaymentAmount() const
 {
     return _paymentAmount;
 }
@@ -142,11 +144,11 @@ std::string PaymentHistory::validate() const
     {
         return "Invalid accountId";
     }
-    if (_paymentAmount <= 0)
+    if (_paymentAmount < sdrs::money::Money(0))
     {
         return "Payment amount must be positive";
     }
-    return "Unknown";
+    return "";
 }
 
 std::string PaymentHistory::toJson() const
@@ -155,7 +157,8 @@ std::string PaymentHistory::toJson() const
     oss << "{";
     oss << "\"paymentId\":" << _paymentId << ",";
     oss << "\"accountId\":" << _accountId << ",";
-    oss << "\"amount\":" << _paymentAmount << ",";
+    oss << "\"amount\":" << _paymentAmount.getAmount() << ",";
+    oss << "\"amountFormatted\":\"" << _paymentAmount.format() << "\",";
     oss << "\"method\":\"" << paymentMethodToString(_method) << "\",";
     oss << "\"status\":\"" << paymentStatusToString(_status) << "\",";
     oss << "\"isLate\":" << (isLate() ? "true" : "false");
@@ -201,7 +204,7 @@ std::string PaymentHistory::paymentMethodToString(PaymentMethod method)
         case PaymentMethod::Cash:
         {
             return "Cash";
-        }
+        }   
         case PaymentMethod::Card:
         {
             return "Card";
@@ -219,33 +222,32 @@ std::string PaymentHistory::paymentMethodToString(PaymentMethod method)
 
 PaymentStatus PaymentHistory::stringToPaymentStatus(const std::string& value)
 {
-    if (value == "Pending")
+    if (value == "Pending") 
     {
         return PaymentStatus::Pending;
     }
-    if (value == "Completed")
+    if (value == "Completed") 
     {
         return PaymentStatus::Completed;
     }
-    if (value == "Failed")
+    if (value == "Failed") 
     {
         return PaymentStatus::Failed;
     }
-    if (value == "Cancelled")
+    if (value == "Cancelled") 
     {
         return PaymentStatus::Cancelled;
     }
-
     throw sdrs::exceptions::ValidationException("Unknown payment status", "paymentStatus");
 }
 
 PaymentMethod PaymentHistory::stringToPaymentMethod(const std::string& value)
 {
-    if (value == "BankTransfer")
+    if (value == "BankTransfer") 
     {
         return PaymentMethod::BankTransfer;
     }
-    if (value == "Cash")
+    if (value == "Cash") 
     {
         return PaymentMethod::Cash;
     }
@@ -257,7 +259,7 @@ PaymentMethod PaymentHistory::stringToPaymentMethod(const std::string& value)
     {
         return PaymentMethod::Other;
     }
-
     throw sdrs::exceptions::ValidationException("Unknown payment method", "paymentMethod");
 }
-}
+
+} // namespace sdrs::borrower

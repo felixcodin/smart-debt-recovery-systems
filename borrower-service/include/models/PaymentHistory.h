@@ -5,6 +5,7 @@
 #include <optional>
 #include <chrono>
 
+
 namespace sdrs::borrower
 {
 enum class PaymentStatus
@@ -27,7 +28,7 @@ class PaymentHistory
 private:
     int _paymentId;
     int _accountId;
-    double _paymentAmount;
+    sdrs::money::Money _paymentAmount; 
     PaymentMethod _method;
     PaymentStatus _status;
     std::chrono::sys_days _paymentDate;
@@ -40,13 +41,13 @@ private:
     void touch();
 
 public:
-    PaymentHistory(int paymentId,int accountId,double paymentAmount,PaymentMethod method
-        ,std::chrono::sys_days paymentDate,std::optional<std::chrono::sys_days> dueDate = std::nullopt);
+    PaymentHistory(int paymentId,int accountId,const sdrs::money::Money& paymentAmount,PaymentMethod method,
+        std::chrono::sys_days paymentDate,std::optional<std::chrono::sys_days> dueDate = std::nullopt);
 
 public:
     int getPaymentId() const;
     int getAccountId() const;
-    double getPaymentAmount() const;
+    const sdrs::money::Money& getPaymentAmount() const; 
     PaymentMethod getMethod() const;
     PaymentStatus getStatus() const;
     std::chrono::sys_days getPaymentDate() const;
@@ -74,7 +75,5 @@ public:
     static PaymentStatus stringToPaymentStatus(const std::string& value);
     static PaymentMethod stringToPaymentMethod(const std::string& value);
 };
-
-}
-
-#endif // SDRS_BORROWER_PAYMENTHISTORY_H
+} 
+#endif 
