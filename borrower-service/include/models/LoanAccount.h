@@ -6,7 +6,6 @@
 
 namespace sdrs::borrower
 {
-
 enum class AccountStatus
 {
     Current,
@@ -23,25 +22,23 @@ class LoanAccount
 private:
     int _accountId;
     int _borrowerId;
-    double _loanAmount;
-    double _initialAmount;
-    double _remainingAmount;
+    sdrs::money::Money _loanAmount;
+    sdrs::money::Money _initialAmount;
+    sdrs::money::Money _remainingAmount;
     double _interestRate;
-    double _monthlyPaymentAmount = 0.0;
-    double _totalPaidAmount = 0.0;
-    double _lateFees = 0.0;
-    int _loanTermMonths = 12;
+    sdrs::money::Money _monthlyPaymentAmount;
+    sdrs::money::Money _totalPaidAmount;
+    sdrs::money::Money _lateFees;
+    int _loanTermMonths;
     std::chrono::sys_seconds _lastPaymentDate{};
     std::chrono::sys_seconds _nextPaymentDueDate{};
-    AccountStatus _accountStatus = AccountStatus::Current;
-    int _daysPastDue = 0;
-    int _numberOfMissedPayments = 0;
+    AccountStatus _accountStatus{AccountStatus::Current};
+    int _daysPastDue{0};
+    int _numberOfMissedPayments{0};
     std::chrono::sys_seconds _loanStartDate;
     std::chrono::sys_seconds _loanEndDate;
     std::chrono::sys_seconds _createdAt;
     std::chrono::sys_seconds _updatedAt;
-    bool _validAmounts = true;
-    bool _validInterest = true;
     static constexpr int PAYMENT_CYCLE_DAYS = 30;
 
 private:
@@ -53,17 +50,15 @@ private:
 public:
     LoanAccount() = delete;
     LoanAccount(int accountId,int borrowerId,double loanAmount,double interestRate,int loanTermMonths);
-
-public:
     int getAccountId() const;
     int getBorrowerId() const;
-    double getLoanAmount() const;
-    double getInitialAmount() const;
-    double getRemainingAmount() const;
+    sdrs::money::Money getLoanAmount() const;
+    sdrs::money::Money getInitialAmount() const;
+    sdrs::money::Money getRemainingAmount() const;
+    sdrs::money::Money getMonthlyPaymentAmount() const;
+    sdrs::money::Money getTotalPaidAmount() const;
+    sdrs::money::Money getLateFees() const;
     double getInterestRate() const;
-    double getMonthlyPaymentAmount() const;
-    double getTotalPaidAmount() const;
-    double getLateFees() const;
     int getLoanTermMonths() const;
     AccountStatus getStatus() const;
     int getDaysPastDue() const;
@@ -74,14 +69,12 @@ public:
     std::chrono::sys_seconds getUpdatedAt() const;
     std::chrono::sys_seconds getLastPaymentDate() const;
     std::chrono::sys_seconds getNextPaymentDueDate() const;
-    bool isValidAmounts() const;
-    bool isValidInterest() const;
 
 public:
     void updateStatus(AccountStatus newStatus);
-    bool canUpdateStatus(AccountStatus fromStatus, AccountStatus toStatus) const;
+    bool canUpdateStatus(AccountStatus fromStatus,AccountStatus toStatus) const;
     void markPaymentMissed();
-    void recordPayment(double amount);
+    void recordPayment(const sdrs::money::Money& amount);
     void incrementDaysPastDue(int days);
     bool isTerminalStatus() const;
     bool isFullyPaid() const;
@@ -91,5 +84,5 @@ public:
     static std::string statusToString(AccountStatus status);
     static AccountStatus stringToStatus(const std::string& statusStr);
 };
-}
+} 
 #endif
