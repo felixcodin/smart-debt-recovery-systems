@@ -1,6 +1,6 @@
 #ifndef SDRS_BORROWER_LOANACCOUNT_H
 #define SDRS_BORROWER_LOANACCOUNT_H
-
+#include "../../../common/include/models/Money.h"
 #include <string>
 #include <chrono>
 

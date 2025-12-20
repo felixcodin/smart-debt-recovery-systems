@@ -1,6 +1,6 @@
 #ifndef SDRS_BORROWER_PAYMENTHISTORY_H
 #define SDRS_BORROWER_PAYMENTHISTORY_H
-
+#include "../../../common/include/models/Money.h"
 #include <string>
 #include <optional>
 #include <chrono>
