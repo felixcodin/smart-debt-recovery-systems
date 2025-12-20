@@ -68,6 +68,7 @@ AlgorithmUsed RiskAssessment::getAlgorithmUsed() const { return _algorithmUsed; 
 std::chrono::sys_seconds RiskAssessment::getAssessmentDate() const { return _assessmentDate; }
 std::chrono::sys_seconds RiskAssessment::getCreatedAt() const { return _createdAt; }
 const std::map<std::string, double>& RiskAssessment::getRiskFactors() const { return _riskFactors; }
+double RiskAssessment::getRiskScore() const { return _riskScore; }
 
 std::string RiskAssessment::toJson() const
 {
@@ -385,7 +386,7 @@ double RiskScorer::encodeEmploymentStatus(sdrs::borrower::EmploymentStatus statu
     case sdrs::borrower::EmploymentStatus::SelfEmployed:
         return 1.0;
     case sdrs::borrower::EmploymentStatus::PartTime:
-    case::sdrs::borrower::EmploymentStatus::Student:
+    case sdrs::borrower::EmploymentStatus::Student:
         return 0.5;
     case sdrs::borrower::EmploymentStatus::Unemployed:
     case sdrs::borrower::EmploymentStatus::Retired:
@@ -405,7 +406,7 @@ double RiskScorer::getEmploymentRiskContribution(sdrs::borrower::EmploymentStatu
     case sdrs::borrower::EmploymentStatus::SelfEmployed:
         return 0.0;
     case sdrs::borrower::EmploymentStatus::PartTime:
-    case::sdrs::borrower::EmploymentStatus::Student:
+    case sdrs::borrower::EmploymentStatus::Student:
         return 0.05;
     case sdrs::borrower::EmploymentStatus::Unemployed:
     case sdrs::borrower::EmploymentStatus::Retired:

@@ -51,6 +51,7 @@ public:
     int getAccountId() const;
     int getBorrowerId() const;
     RiskLevel getRiskLevel() const;
+    double getRiskScore() const;
     AlgorithmUsed getAlgorithmUsed() const;
     std::chrono::sys_seconds getAssessmentDate() const;
     std::chrono::sys_seconds getCreatedAt() const;
