@@ -1,4 +1,8 @@
+// CommunicationException.cpp - Implementation
+
 #include "../../include/exceptions/CommunicationException.h"
+
+using namespace sdrs::constants;
 
 namespace sdrs::exceptions
 {
