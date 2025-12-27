@@ -1,6 +1,9 @@
+// RandomForest.h - Random Forest algorithm for risk prediction
+
 #ifndef SDRS_RISK_RANDOMFOREST_H
 #define SDRS_RISK_RANDOMFOREST_H
 
+#include "../../../common/include/utils/Constants.h"
 #include <vector>
 #include <memory>
 #include <random>
@@ -26,8 +29,6 @@ struct TreeNode
 class DecisionTree
 {
 private:
-    static constexpr double VARIANCE_EPSILON = 1e-7;
-    
     std::unique_ptr<TreeNode> _root;
     int _maxDepth;
     int _minSamplesSplit;
@@ -39,13 +40,11 @@ private:
     mutable std::vector<double> _tempRightY;
 
 public:
-    DecisionTree(int maxDepth = 7, int minSamplesSplit = 5);
+    DecisionTree(int maxDepth = sdrs::constants::risk::RF_MAX_DEPTH, int minSamplesSplit = sdrs::constants::risk::RF_MIN_SAMPLES_SPLIT);
     ~DecisionTree();
 
-    void train(const std::vector<std::vector<double>>& X, const std::vector<double>& y);
-    
-    double predict(const std::vector<double>& features) const;
-    
+    void train(const std::vector<std::vector<double>>& X, const std::vector<double>& y);  // X=features, y=labels
+    double predict(const std::vector<double>& features) const;  // returns predicted value
     bool isTrained() const;
     int getDepth() const;
 
@@ -78,6 +77,7 @@ private:
     double predictRecursive(const TreeNode* node, const std::vector<double>& features) const;
 };
 
+// Ensemble of decision trees - averages predictions for better accuracy
 class RandomForest
 {
 private:
@@ -91,17 +91,18 @@ private:
     std::mt19937 _randomEngine;
 
 public:
-    RandomForest(int numTrees = 10, int maxDepth = 7, int minSamples = 5);
+    RandomForest(
+        int numTrees = sdrs::constants::risk::RF_NUM_TREES,
+        int maxDepth = sdrs::constants::risk::RF_MAX_DEPTH,
+        int minSamples = sdrs::constants::risk::RF_MIN_SAMPLES_SPLIT
+    );
     ~RandomForest();
     
-    void train(const std::vector<std::vector<double>>& X, const std::vector<double>& y);
-    
-    double predict(const std::vector<double>& features) const;
-    
+    void train(const std::vector<std::vector<double>>& X, const std::vector<double>& y);  // trains all trees with bootstrap sampling
+    double predict(const std::vector<double>& features) const;  // returns average of all tree predictions
     bool isTrained() const;
     int getNumTrees() const;
-
-    const std::map<int, double>& getFeatureImportances() const;
+    const std::map<int, double>& getFeatureImportances() const;  // which features matter most
 
 private:
     void bootstrapSample(
