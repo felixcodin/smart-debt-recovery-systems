@@ -22,10 +22,12 @@ namespace app
 // ============================================================================
 namespace database
 {
-    inline constexpr const char* DEFAULT_HOST = "localhost";
-    inline constexpr int DEFAULT_PORT = 5432;
-    inline constexpr const char* DEFAULT_NAME = "sdrs_db";
-    inline constexpr const char* DEFAULT_USER = "sdrs_user";
+    inline constexpr const char* DB_HOST = "localhost";
+    inline constexpr int DB_PORT = 5432;
+    inline constexpr const char* DB_NAME = "sdrs_db";
+    inline constexpr const char* DB_USER = "sdrs_user";
+    inline constexpr const char* DB_PASSWORD = "";
+    
     inline constexpr int CONNECTION_TIMEOUT_SEC = 30;
     inline constexpr int MAX_POOL_SIZE = 10;
     inline constexpr int MIN_POOL_SIZE = 2;
@@ -36,11 +38,15 @@ namespace database
 // ============================================================================
 namespace ports
 {
-    inline constexpr int API_GATEWAY = 8080;
-    inline constexpr int BORROWER_SERVICE = 8081;
-    inline constexpr int RISK_ASSESSMENT_SERVICE = 8082;
-    inline constexpr int RECOVERY_STRATEGY_SERVICE = 8083;
-    inline constexpr int COMMUNICATION_SERVICE = 8084;
+    inline constexpr int API_GATEWAY_PORT = 8080;
+    
+    inline constexpr int BORROWER_SERVICE_PORT = 8081;
+    
+    inline constexpr int RISK_SERVICE_PORT = 8082;
+    
+    inline constexpr int RECOVERY_SERVICE_PORT = 8083;
+    
+    inline constexpr int COMMUNICATION_SERVICE_PORT = 8084;
 }
 
 enum class InactiveReason
