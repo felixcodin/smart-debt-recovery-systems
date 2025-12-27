@@ -1,3 +1,5 @@
+// SMSChannel.cpp - Implementation
+
 #include "../../include/channels/SMSChannel.h"
 
 #include <iostream>
