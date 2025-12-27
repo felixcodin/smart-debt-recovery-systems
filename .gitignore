@@ -40,5 +40,22 @@
 # debug information files
 *.dwo
 
-# Visual Studio Code file
-.vscode
+# Build directories
+build/
+cmake-build-*/
+out/
+
+# Conan
+CMakeUserPresets.json
+graph_info.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
