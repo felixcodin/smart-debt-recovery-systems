@@ -1,8 +1,11 @@
+// Money.h - Value object for currency amounts with arithmetic operations
+
 #ifndef MONEY_H
 #define MONEY_H
 
 #include <iostream>
 #include <string>
+#include "../utils/Constants.h"
 
 namespace sdrs::money   
 {
@@ -11,19 +14,24 @@ class Money
 {
 private:
     double _amount;
-    static constexpr double EPSILON = 0.01;
+    sdrs::constants::MoneyType _moneyType = sdrs::constants::MoneyType::VND;
+    
 
 public:
-    Money(double amt = 0.0);
+    explicit Money(
+        double amt = 0.0, 
+        sdrs::constants::MoneyType moneyType = sdrs::constants::MoneyType::VND
+    );
 
     double getAmount() const;
-    std::string format() const;
-    std::string formatUSD() const;
+    sdrs::constants::MoneyType getMoneyType() const;
+    std::string format() const;  // "1.000.000 VND" or "$1,000.00"
     void setAmount(double amt);
 
+    // Arithmetic operators (validates same currency)
     Money operator+(const Money& other) const;
     Money operator-(const Money& other) const;
-    Money operator*(double factor) const;
+    Money operator*(double factor) const;  // e.g., amount * interestRate
     Money operator/(double divisor) const;
 
     bool operator==(const Money& other) const;
