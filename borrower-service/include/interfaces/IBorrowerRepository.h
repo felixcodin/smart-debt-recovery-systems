@@ -1,3 +1,5 @@
+// IBorrowerRepository.h - Interface for borrower data access
+
 #ifndef INTERFACE_BORROWER_REPOSITORY_H
 #define INTERFACE_BORROWER_REPOSITORY_H
 
