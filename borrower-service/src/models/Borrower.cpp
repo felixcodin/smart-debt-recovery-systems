@@ -1,9 +1,14 @@
+// Borrower.cpp - Implementation
+
 #include "../../include/models/Borrower.h"
 #include "../../../common/include/exceptions/ValidationException.h"
 
 #include <regex>
 #include <cmath>
 #include <sstream>
+
+using namespace sdrs::constants;
+using namespace sdrs::exceptions;
 
 namespace sdrs::borrower
 {
@@ -24,11 +29,11 @@ Borrower::Borrower(int id,
 
 void Borrower::setEmail(const std::string& email)
 {
-    static const std::regex emailPattern(R"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)");
+    static const std::regex emailPattern(validation::EMAIL_PATTERN);
 
     if (!std::regex_match(email, emailPattern))
     {
-        throw sdrs::exceptions::ValidationException("Invalid email format: ", "email");
+        throw ValidationException("Invalid email format: ", "email");
     }
     _email = email;
     _updatedAt = std::chrono::floor<std::chrono::seconds>(
@@ -40,12 +45,12 @@ void Borrower::setMonthlyIncome(double income)
 {
     if (income < 0)
     {
-        throw sdrs::exceptions::ValidationException("Income cannot be negative", "monthlyIncome");
+        throw ValidationException("Income cannot be negative", "monthlyIncome");
     }
 
     if (std::isnan(income) || std::isinf(income))
     {
-        throw sdrs::exceptions::ValidationException("Income must be a valid number", "monthlyIncome");
+        throw ValidationException("Income must be a valid number", "monthlyIncome");
     }
 
     _monthlyIncome = income;
@@ -153,6 +158,11 @@ std::string Borrower::getMaskedEmail() const
     return _email.substr(0, 1) + "*****" + _email.substr(atPos);
 }
 
+std::string Borrower::getEmail() const
+{
+    return _email;
+}
+
 bool Borrower::hasEmail() const
 {
     return !_email.empty();
@@ -186,11 +196,11 @@ bool Borrower::hasCompleteProfile() const
 
 void Borrower::setPhoneNumber(const std::string& phoneNumber)
 {
-    std::regex phoneNumberPattern(R"(^[0-9]{10,11}$)");
+    std::regex phoneNumberPattern(validation::PHONE_PATTERN);
 
     if (!std::regex_match(phoneNumber, phoneNumberPattern))
     {
-        throw sdrs::exceptions::ValidationException("Invalid phone number format", "phoneNumber");
+        throw ValidationException("Invalid phone number format", "phoneNumber");
     }
     _phoneNumber = phoneNumber;
     _updatedAt = std::chrono::floor<std::chrono::seconds>(
@@ -251,7 +261,7 @@ void Borrower::setDateOfBirth(const std::string& dobString)
 
     if (iss.fail())
     {
-        throw sdrs::exceptions::ValidationException("Invalid date format. Expected YYYY-MM-DD", "dateOfBirth");
+        throw ValidationException("Invalid date format. Expected YYYY-MM-DD", "dateOfBirth");
     }
 
     _dateOfBirth = tmp;
