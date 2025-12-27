@@ -1,11 +1,14 @@
 #include "../../include/strategies/RecoveryStrategy.h"
 
+using namespace sdrs::constants;
+using namespace sdrs::money;
+
 namespace sdrs::strategy
 {
 
 RecoveryStrategy::RecoveryStrategy(int accountId,
     int borrowerId,
-    const sdrs::money::Money& expectedAmount)
+    const Money& expectedAmount)
     : _strategyId(0),
     _accountId(accountId),
     _borrowerId(borrowerId),
