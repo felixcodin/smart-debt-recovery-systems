@@ -23,7 +23,7 @@ public:
     ValidationException(
         const std::string& message, 
         const std::string& field = "", 
-        sdrs::constants::ValidationErrorCode code = ValidationErrorCode::ValidationFailed
+        sdrs::constants::ValidationErrorCode code = sdrs::constants::ValidationErrorCode::ValidationFailed
     );
 
 public:

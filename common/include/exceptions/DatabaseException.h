@@ -13,8 +13,8 @@ namespace sdrs::exceptions
 class DatabaseException : public std::exception
 {
 private:
-    sdrs::constants::DatabaseErrorCode _errorCode;
     std::string _message;
+    sdrs::constants::DatabaseErrorCode _errorCode;
 
 public:
     // Constructor: creates database exception with message and error code
