@@ -1,3 +1,5 @@
+// EmailChannel.h - Email communication channel implementation
+
 #ifndef EMAIL_CHANNEL_H
 #define EMAIL_CHANNEL_H
 

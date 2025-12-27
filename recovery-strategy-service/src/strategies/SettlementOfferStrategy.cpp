@@ -1,6 +1,13 @@
+// SettlementOfferStrategy.cpp - Implementation
+
 #include "../../include/strategies/SettlementOfferStrategy.h"
 #include "../../../common/include/exceptions/ValidationException.h"
 #include <format>
+
+using namespace sdrs::exceptions;
+using namespace sdrs::constants;
+using namespace sdrs::money;
+using namespace sdrs::communication;
 
 namespace sdrs::strategy
 {
@@ -8,25 +15,27 @@ namespace sdrs::strategy
 SettlementOfferStrategy::SettlementOfferStrategy(
     int accountId,
     int borrowerId,
-    const sdrs::money::Money& expectedAmount,
+    const Money& expectedAmount,
     std::shared_ptr<IPaymentChecker> paymentChecker,
-    std::shared_ptr<sdrs::communication::ICommunicationService> channel,
+    std::shared_ptr<ICommunicationService> channel,
     double discountRate,
-    int offerValidDays
+    int offerValidDays,
+    int maxSettlementAttempt
 ) : RecoveryStrategy(accountId, borrowerId, expectedAmount),
     _paymentChecker(paymentChecker),
     _channel(channel),
     _discountRate(discountRate),
-    _offerValidDays(offerValidDays)
+    _offerValidDays(offerValidDays),
+    _maxSettlementAttempt(maxSettlementAttempt)
 {
     if (discountRate < 0 || discountRate > 1)
     {
-        throw sdrs::exceptions::ValidationException("Discount Rate must be between 0 and 1", "SettlementOfferStrategy");
+        throw ValidationException("Discount Rate must be between 0 and 1", "SettlementOfferStrategy");
     }
 
     if (offerValidDays <= 0)
     {
-        throw sdrs::exceptions::ValidationException("Offer Valid Days must be positive", "SettlementOfferStrategy");
+        throw ValidationException("Offer Valid Days must be positive", "SettlementOfferStrategy");
     }
 
     _minimumAcceptableAmount = calculateSettlementAmount();
@@ -37,21 +46,21 @@ StrategyType SettlementOfferStrategy::getType() const
     return StrategyType::SettlementOffer;
 }
 
-sdrs::money::Money SettlementOfferStrategy::calculateSettlementAmount() const
+Money SettlementOfferStrategy::calculateSettlementAmount() const
 {
-    double discountedAmount = _expectedAmount.getAmount() * (1.0 -_discountRate);
-    return sdrs::money::Money(discountedAmount);
+    double discountedAmount = _expectedAmount.getAmount() * (1.0 - _discountRate);
+    return Money(discountedAmount);
 }
 
 void SettlementOfferStrategy::sendOffer()
 {
     _attemptCount++;
 
-    sdrs::money::Money offerAmount = calculateSettlementAmount();
+    Money offerAmount = calculateSettlementAmount();
 
     std::string message = std::format(
         "SETTLEMENT OFFER\n Original amount: {}\n Discount: {}%\n Settlement amount: {}\n Valid for: {}",
-        _expectedAmount.formatUSD(), _discountRate*100, offerAmount.formatUSD(), _offerValidDays
+        _expectedAmount.format(), _discountRate*100, offerAmount.format(), _offerValidDays
     );
 
     _channel->sendMessage(_accountId, message);
@@ -74,9 +83,17 @@ StrategyStatus SettlementOfferStrategy::execute()
     }
 
     _status = StrategyStatus::Active;
-
-    sendOffer();
-
+    while (_attemptCount < _maxSettlementAttempt)
+    {
+        if (checkPaymentReceived())
+        {
+            _status = StrategyStatus::Completed;
+            _actualAmount = _minimumAcceptableAmount;
+            return _status;
+        }
+        sendOffer();
+        _attemptCount++;
+    }
     if (checkPaymentReceived())
     {
         _actualAmount = _minimumAcceptableAmount;

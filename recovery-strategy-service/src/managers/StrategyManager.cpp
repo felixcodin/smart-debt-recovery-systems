@@ -1,26 +1,34 @@
+// StrategyManager.cpp - Implementation
+
 #include "../../include/managers/StrategyManager.h"
 #include "../../../common/include/exceptions/ValidationException.h"
+
+using namespace sdrs::exceptions;
+using namespace sdrs::money;
+using namespace sdrs::communication;
+using namespace sdrs::constants;
+using namespace sdrs::risk;
 
 namespace sdrs::strategy
 {
 
 StrategyManager::StrategyManager(
     std::shared_ptr<IPaymentChecker> paymentChecker,
-    std::shared_ptr<sdrs::communication::ICommunicationService> communicationService
+    std::shared_ptr<ICommunicationService> communicationService
 ) : _paymentChecker(paymentChecker),
     _communicationService(communicationService),
-    _riskScorer(std::make_unique<sdrs::risk::RiskScorer>()),
-    _kmeans(std::make_unique<sdrs::risk::KMeansClustering>(3)),
+    _riskScorer(std::make_unique<RiskScorer>()),
+    _kmeans(std::make_unique<KMeansClustering>(constants::risk::KMEANS_NUM_CLUSTERS)),
     _isModelsTrained(false)
 {
     if (!paymentChecker)
     {
-        throw sdrs::exceptions::ValidationException("Payment Checker cannot be null", "StrategyManager");
+        throw ValidationException("Payment Checker cannot be null", "StrategyManager");
     }
 
     if (!communicationService)
     {
-        throw sdrs::exceptions::ValidationException("Communication Service cannot be null", "StrategyManager");
+        throw ValidationException("Communication Service cannot be null", "StrategyManager");
     }
 }
     
@@ -52,11 +60,11 @@ bool StrategyManager::areModelsReady() const
     return _isModelsTrained && _riskScorer->isModelReady() && _kmeans->isTrained();
 }
 
-AnalysisResult StrategyManager::analyzeAccount(const sdrs::risk::RiskFeatures& features)
+AnalysisResult StrategyManager::analyzeAccount(const RiskFeatures& features)
 {
     if (!areModelsReady())
     {
-        throw sdrs::exceptions::ValidationException(
+        throw ValidationException(
             "Model not trained. Call trainModels() first.",
             "StrategyManager"
         );
@@ -76,111 +84,111 @@ AnalysisResult StrategyManager::analyzeAccount(const sdrs::risk::RiskFeatures& f
 
     switch (result.riskLevel)
     {
-    case sdrs::risk::RiskLevel::Low:
+    case RiskLevel::Low:
         result.recommendedStrategy = StrategyType::AutomatedReminder;
         break;
-    case sdrs::risk::RiskLevel::Medium:
+    case RiskLevel::Medium:
         result.recommendedStrategy = StrategyType::SettlementOffer;
         break;
-    case sdrs::risk::RiskLevel::High:
+    case RiskLevel::High:
         result.recommendedStrategy = StrategyType::LegalAction;
         break;
     default:
-        throw sdrs::exceptions::ValidationException("Unknown risk level", "StrategyManager");
+        throw ValidationException("Unknown risk level", "StrategyManager");
     }
 
     return result;
 }
 
 std::vector<double> StrategyManager::prepareClusterFeatures(
-    const sdrs::risk::RiskFeatures& features,
+    const RiskFeatures& features,
     double riskScore) const
 {
     return {
-        static_cast<double>(features.daysPastDue) / 365.0,
-        static_cast<double>(features.numberOfMissedPayments) / 12.0,
+        static_cast<double>(features.daysPastDue) / static_cast<double>(constants::time::DAYS_PER_YEAR),
+        static_cast<double>(features.numberOfMissedPayments) / 12.0, // Max 12 missed payments per year
         features.debtToIncomeRatio,
         riskScore
     };
 }
 
-sdrs::risk::RiskLevel StrategyManager::clusterToRiskLevel(int clusterId) const
+RiskLevel StrategyManager::clusterToRiskLevel(int clusterId) const
 {
     switch (clusterId)
     {
     case 0:
-        return sdrs::risk::RiskLevel::Low;
+        return RiskLevel::Low;
     case 1:
-        return sdrs::risk::RiskLevel::Medium;
+        return RiskLevel::Medium;
     case 2:
-        return sdrs::risk::RiskLevel::High;
+        return RiskLevel::High;
     }
 
-    throw sdrs::exceptions::ValidationException("Unknown cluster ID to convert to Risk Level", "StrategyManager");
+    throw ValidationException("Unknown cluster ID to convert to Risk Level", "StrategyManager");
 }
 
-sdrs::risk::RiskLevel StrategyManager::combineAnalysis(
+RiskLevel StrategyManager::combineAnalysis(
     double riskScore,
     int clusterId) const
 {
-    sdrs::risk::RiskLevel scoreLevel;
-    if (riskScore < 0.33)
+    RiskLevel scoreLevel;
+    if (riskScore < constants::risk::LOW_RISK_MAX)
     {
-        scoreLevel = sdrs::risk::RiskLevel::Low;
+        scoreLevel = RiskLevel::Low;
     }
-    else if (riskScore < 0.67)
+    else if (riskScore < constants::risk::MEDIUM_RISK_MAX)
     {
-        scoreLevel = sdrs::risk::RiskLevel::Medium;
+        scoreLevel = RiskLevel::Medium;
     }
     else
     {
-        scoreLevel = sdrs::risk::RiskLevel::High;
+        scoreLevel = RiskLevel::High;
     }
 
-    sdrs::risk::RiskLevel clusterLevel = clusterToRiskLevel(clusterId);
+    RiskLevel clusterLevel = clusterToRiskLevel(clusterId);
 
-    if ((scoreLevel == sdrs::risk::RiskLevel::High)
-    || (clusterLevel == sdrs::risk::RiskLevel::High))
+    if ((scoreLevel == RiskLevel::High)
+    || (clusterLevel == RiskLevel::High))
     {
-        return sdrs::risk::RiskLevel::High;
+        return RiskLevel::High;
     }
-    if ((scoreLevel == sdrs::risk::RiskLevel::Medium)
-    || (clusterLevel == sdrs::risk::RiskLevel::Medium))
+    if ((scoreLevel == RiskLevel::Medium)
+    || (clusterLevel == RiskLevel::Medium))
     {
-        return sdrs::risk::RiskLevel::Medium;
+        return RiskLevel::Medium;
     }
 
-    return sdrs::risk::RiskLevel::Low;
+    return RiskLevel::Low;
 }
 
 std::unique_ptr<RecoveryStrategy> StrategyManager::createStrategy(
     int accountId,
     int borrowerId,
     const sdrs::money::Money& amount,
-    sdrs::risk::RiskLevel riskLevel)
+    RiskLevel riskLevel)
 {
     switch (riskLevel)
     {
-    case sdrs::risk::RiskLevel::Low:
+    case RiskLevel::Low:
         return createRemindersStrategy(accountId, borrowerId, amount);
-    case sdrs::risk::RiskLevel::Medium:
+    case RiskLevel::Medium:
         return createSettlementStrategy(accountId, borrowerId, amount);
-    case sdrs::risk::RiskLevel::High:
+    case RiskLevel::High:
         return createLegalStrategy(accountId, borrowerId, amount);
     }
 
-    throw sdrs::exceptions::ValidationException("Invalid risk level", "StrategyManager");
+    throw ValidationException("Invalid risk level", "StrategyManager");
 }
 
 StrategyStatus StrategyManager::assignAndExecute(
     int accountId,
     int borrowerId,
     const sdrs::money::Money& amount,
-    sdrs::risk::RiskLevel riskLevel)
+    RiskLevel riskLevel)
 {
     if (hasActiveStrategy(accountId))
     {
-        throw sdrs::exceptions::ValidationException(
+        throw ValidationException(
             "Account already has an active strategy",
             "StrategyManager"
         );
@@ -203,11 +211,11 @@ StrategyStatus StrategyManager::assignWithFullAnalysis(
     int accountId,
     int borrowerId,
     const sdrs::money::Money& amount,
-    const sdrs::risk::RiskFeatures& features)
+    const RiskFeatures& features)
 {
     if (hasActiveStrategy(accountId))
     {
-        throw sdrs::exceptions::ValidationException("Account already has an active strategy", "StrategyManager"); 
+        throw ValidationException("Account already has an active strategy", "StrategyManager"); 
     }
 
     AnalysisResult analysis = analyzeAccount(features);

@@ -1,3 +1,5 @@
+// EmailChannel.cpp - Implementation
+
 #include "../../include/channels/EmailChannel.h"
 #include <iostream>
 

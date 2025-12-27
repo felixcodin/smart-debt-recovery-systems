@@ -1,3 +1,5 @@
+// PaymentCheckerImpl.h - Implementation of IPaymentChecker using repository
+
 #ifndef PAYMENT_CHECKER_IMPL_H
 #define PAYMENT_CHECKER_IMPL_H
 

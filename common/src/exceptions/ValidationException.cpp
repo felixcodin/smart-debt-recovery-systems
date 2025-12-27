@@ -1,11 +1,15 @@
+// ValidationException.cpp - Implementation
+
 #include "../../include/exceptions/ValidationException.h"
+
+using namespace sdrs::constants;
 
 namespace sdrs::exceptions
 {
 
 ValidationException::ValidationException(const std::string& message,
     const std::string& field,
-    ErrorCode code)
+    ValidationErrorCode code)
     : _field(field),
       _code(code),
       _message("Validation error [" + field + "]: " + message)
@@ -23,7 +27,7 @@ const std::string& ValidationException::getField() const
     return _field;
 }
 
-ErrorCode ValidationException::getCode() const
+ValidationErrorCode ValidationException::getCode() const
 {
     return _code;
 }

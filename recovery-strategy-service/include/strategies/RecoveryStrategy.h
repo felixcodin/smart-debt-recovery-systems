@@ -1,27 +1,14 @@
+// RecoveryStrategy.h - Abstract base class for debt recovery strategies (Strategy Pattern)
+
 #ifndef RECOVERY_STRATEGY_H
 #define RECOVERY_STRATEGY_H
 
-#include "../../../common/include/models/Money.h"
 #include <string>
+#include "../../../common/include/models/Money.h"
+#include "../../../common/include/utils/Constants.h"
 
 namespace sdrs::strategy
 {
-
-enum class StrategyType
-{
-    AutomatedReminder,
-    SettlementOffer,
-    LegalAction
-};
-
-enum class StrategyStatus
-{
-    Pending,
-    Active,
-    Completed,
-    Failed,
-    Cancelled
-};
 
 class RecoveryStrategy
 {
@@ -29,7 +16,7 @@ protected:
     int _strategyId;
     int _accountId;
     int _borrowerId;
-    StrategyStatus _status;
+    sdrs::constants::StrategyStatus _status;
     int _attemptCount;
     sdrs::money::Money _expectedAmount;
     sdrs::money::Money _actualAmount;
@@ -39,14 +26,15 @@ public:
         int borrowerId,
         const sdrs::money::Money& expectedAmount);
 
+    // Pure virtual methods - must be implemented by subclasses
 public:
-    virtual StrategyStatus execute() = 0;
-    virtual StrategyType getType() const = 0;
+    virtual sdrs::constants::StrategyStatus execute() = 0;  // run the strategy, returns final status
+    virtual sdrs::constants::StrategyType getType() const = 0;
     virtual std::string toJson() const = 0;
     virtual ~RecoveryStrategy() = default;
 
 public:
-    bool canExecute() const;
+    bool canExecute() const;  // check if strategy can still run (not completed/failed)
 
 };
 

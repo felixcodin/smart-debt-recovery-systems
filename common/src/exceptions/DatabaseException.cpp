@@ -1,4 +1,8 @@
+// DatabaseException.cpp - Implementation
+
 #include "../../include/exceptions/DatabaseException.h"
+
+using namespace sdrs::constants;
 
 namespace sdrs::exceptions
 {

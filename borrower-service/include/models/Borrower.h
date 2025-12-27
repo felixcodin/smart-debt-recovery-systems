@@ -1,33 +1,14 @@
+// Borrower.h - Domain entity representing a loan borrower
+
 #ifndef BORROWER_H
 #define BORROWER_H
 
 #include <string>
 #include <chrono>
+#include "../../../common/include/utils/Constants.h"
 
 namespace sdrs::borrower
 {
-
-enum class InactiveReason
-{
-    PaidOff,
-    AccountClosed,
-    Deceased,
-    Fraud,
-    LegalAction,
-    None
-};
-
-enum class EmploymentStatus
-{
-    Employed,
-    Unemployed,
-    SelfEmployed,
-    Student,
-    Retired,
-    Contract,
-    PartTime,
-    None
-};
 
 class Borrower
 {
@@ -39,29 +20,30 @@ private:
     std::string _phoneNumber;
     std::string _address;
     std::chrono::sys_days _dateOfBirth;
-    EmploymentStatus _employmentStatus = EmploymentStatus::None;
+    sdrs::constants::EmploymentStatus _employmentStatus = sdrs::constants::EmploymentStatus::None;
     bool _isActive = false;
     std::chrono::sys_seconds _createdAt;
     std::chrono::sys_seconds _updatedAt;
     double _monthlyIncome = 0.0;
-    InactiveReason _inactiveReason = InactiveReason::None;
+    sdrs::constants::InactiveReason _inactiveReason = sdrs::constants::InactiveReason::None;
     std::chrono::sys_seconds _inactivatedAt;
 
 public:
     Borrower() = delete;
     Borrower(int id, const std::string& fname, const std::string& lname);
 
+    // Setters with validation
 public:
-    void setEmail(const std::string& email);
-    void setMonthlyIncome(double income);
+    void setEmail(const std::string& email);  // validates email format
+    void setMonthlyIncome(double income);     // must be positive
     void setActive();
-    void setInactive(InactiveReason reason);
+    void setInactive(sdrs::constants::InactiveReason reason);
     void setPhoneNumber(const std::string& phoneNumber);
     void setAddress(const std::string& address);
-    void setDateOfBirth(const std::string& dobString);
+    void setDateOfBirth(const std::string& dobString);  // format: YYYY-MM-DD
     void setFirstName(const std::string& fname);
     void setLastName(const std::string& lname);
-    void setEmploymentStatus(EmploymentStatus status);
+    void setEmploymentStatus(sdrs::constants::EmploymentStatus status);
 
 public:
     int getId() const;
@@ -71,22 +53,24 @@ public:
     std::chrono::sys_seconds getCreatedAt() const;
     std::chrono::sys_seconds getUpdatedAt() const;
     std::chrono::sys_seconds getInactiveAt() const;
+    std::string getEmail() const;
     std::string getMaskedEmail() const;
-    InactiveReason getInactiveReason() const;
+    sdrs::constants::InactiveReason getInactiveReason() const;
     std::string getPhoneNumber() const;
     std::string getAddress() const;
     double getMonthlyIncome() const;
     std::chrono::year_month_day getDateOfBirth() const;
-    EmploymentStatus getEmploymentStatus() const;
+    sdrs::constants::EmploymentStatus getEmploymentStatus() const;
 
+    // Business rule checks
 public:
     bool hasEmail() const;
-    bool hasValidIncome() const;
+    bool hasValidIncome() const;            // income > 0
     bool isActive() const;
-    bool canContact() const;
-    bool canSendCommunication() const;
-    bool canApplyRecoveryStrategy() const;
-    bool hasCompleteProfile() const;
+    bool canContact() const;                // has phone or email
+    bool canSendCommunication() const;      // active + contactable
+    bool canApplyRecoveryStrategy() const;  // active + has income
+    bool hasCompleteProfile() const;        // all required fields filled
 
 public:
     std::string toJson() const;

@@ -1,5 +1,8 @@
+// PaymentHistory.h - Domain entity for tracking individual payment records
+
 #ifndef SDRS_BORROWER_PAYMENTHISTORY_H
 #define SDRS_BORROWER_PAYMENTHISTORY_H
+
 #include "../../../common/include/models/Money.h"
 #include <string>
 #include <optional>
@@ -8,20 +11,6 @@
 
 namespace sdrs::borrower
 {
-enum class PaymentStatus
-{
-    Pending,
-    Completed,
-    Failed,
-    Cancelled
-};
-enum class PaymentMethod
-{
-    BankTransfer,
-    Cash,
-    Card,
-    Other
-};
 
 class PaymentHistory
 {
@@ -29,8 +18,8 @@ private:
     int _paymentId;
     int _accountId;
     sdrs::money::Money _paymentAmount; 
-    PaymentMethod _method;
-    PaymentStatus _status;
+    sdrs::constants::PaymentMethod _method;
+    sdrs::constants::PaymentStatus _status;
     std::chrono::sys_days _paymentDate;
     std::optional<std::chrono::sys_days> _dueDate;
     std::string _notes;
@@ -41,15 +30,15 @@ private:
     void touch();
 
 public:
-    PaymentHistory(int paymentId,int accountId,const sdrs::money::Money& paymentAmount,PaymentMethod method,
+    PaymentHistory(int paymentId,int accountId,const sdrs::money::Money& paymentAmount, sdrs::constants::PaymentMethod method,
         std::chrono::sys_days paymentDate,std::optional<std::chrono::sys_days> dueDate = std::nullopt);
 
 public:
     int getPaymentId() const;
     int getAccountId() const;
     const sdrs::money::Money& getPaymentAmount() const; 
-    PaymentMethod getMethod() const;
-    PaymentStatus getStatus() const;
+    sdrs::constants::PaymentMethod getMethod() const;
+    sdrs::constants::PaymentStatus getStatus() const;
     std::chrono::sys_days getPaymentDate() const;
     std::optional<std::chrono::sys_days> getDueDate() const;
     std::string getNotes() const;
@@ -70,10 +59,10 @@ public:
 
 public:
     std::string toJson() const;
-    static std::string paymentStatusToString(PaymentStatus status);
-    static std::string paymentMethodToString(PaymentMethod method);
-    static PaymentStatus stringToPaymentStatus(const std::string& value);
-    static PaymentMethod stringToPaymentMethod(const std::string& value);
+    static std::string paymentStatusToString(sdrs::constants::PaymentStatus status);
+    static std::string paymentMethodToString(sdrs::constants::PaymentMethod method);
+    static sdrs::constants::PaymentStatus stringToPaymentStatus(const std::string& value);
+    static sdrs::constants::PaymentMethod stringToPaymentMethod(const std::string& value);
 };
 } 
 #endif 

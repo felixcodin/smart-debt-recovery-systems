@@ -1,8 +1,13 @@
+// KMeansClustering.cpp - Implementation
+
 #include "../../include/algorithms/KMeansClustering.h"
 #include "../../../common/include/exceptions/ValidationException.h"
 #include <numeric>
 #include <cmath>
 #include <algorithm>
+
+using namespace sdrs::constants::risk;
+using namespace sdrs::exceptions;
 
 namespace sdrs::risk
 {
@@ -15,7 +20,7 @@ KMeansClustering::KMeansClustering(int k, int maxIterations)
 {
     if (k <= 0)
     {
-        throw sdrs::exceptions::ValidationException("K must be positive number", "KMean");
+        throw ValidationException("K must be positive number", "KMean");
     }
 }
 
@@ -116,19 +121,19 @@ bool KMeansClustering::updateCentroids(const std::vector<std::vector<double>>& X
 
     _centroids = std::move(newCentroids);
 
-    return totalShift < MAX_TOLERANCE;
+    return totalShift < KMEANS_TOLERANCE;
 }
 
 void KMeansClustering::train(const std::vector<std::vector<double>>& X)
 {
     if (X.empty())
     {
-        throw sdrs::exceptions::ValidationException("Training data cannot be empty", "KMean");
+        throw ValidationException("Training data cannot be empty", "KMean");
     }
 
     if (static_cast<int>(X.size()) < _k)
     {
-        throw sdrs::exceptions::ValidationException("Not enough data points for K clusters", "KMean");
+        throw ValidationException("Not enough data points for K clusters", "KMean");
     }
 
     initializeCentroids(X);
@@ -151,12 +156,12 @@ ClusterResult KMeansClustering::predict(const std::vector<double>& points) const
 {
     if (!_isTrained)
     {
-        throw sdrs::exceptions::ValidationException("Model must be trained before prediction", "KMean");
+        throw ValidationException("Model must be trained before prediction", "KMean");
     }
 
     if (points.size() != _centroids[0].size())
     {
-        throw sdrs::exceptions::ValidationException("Input features size ("
+        throw ValidationException("Input features size ("
             + std::to_string(points.size())
             + ") does not match trained features size ("
             + std::to_string(_centroids[0].size())

@@ -1,14 +1,18 @@
+// RandomForest.cpp - Implementation
+
 #include "../../include/algorithms/RandomForest.h"
 #include <algorithm>
 #include <numeric>
 #include <cmath>
 #include <limits>
 
+using namespace sdrs::constants::risk;
+
 namespace sdrs::risk
 {
 
 TreeNode::TreeNode()
-    : featureIndex(-1),
+    : featureIndex(RF_LEAF_FEATURES_INDEX),
     threshold(0.0),
     leafValue(0.0),
     leftChild(nullptr),
@@ -19,7 +23,7 @@ TreeNode::TreeNode()
 
 bool TreeNode::isLeaf() const
 {
-    return featureIndex == -1;
+    return featureIndex == RF_LEAF_FEATURES_INDEX;
 }
 
 DecisionTree::DecisionTree(int maxDepth, int minSamplesSplit)
@@ -56,36 +60,36 @@ std::unique_ptr<TreeNode> DecisionTree::buildTree(
     
     if (depth >= _maxDepth)
     {
-        node->featureIndex = -1;
+        node->featureIndex = RF_LEAF_FEATURES_INDEX;
         node->leafValue = calculateMean(y);
         return node;
     }
     
     if (X.size() < static_cast<size_t>(_minSamplesSplit))
     {
-        node->featureIndex = -1;
+        node->featureIndex = RF_LEAF_FEATURES_INDEX;
         node->leafValue = calculateMean(y);
         return node;
     }
     
     double variance = calculateVariance(y);
-    if (variance < VARIANCE_EPSILON)
+    if (variance < RF_VARIANCE_EPSILON)
     {
-        node->featureIndex = -1;
+        node->featureIndex = RF_LEAF_FEATURES_INDEX;
         node->leafValue = calculateMean(y);
         return node;
     }
     
-    int bestFeature = -1;
+    int bestFeature = RF_LEAF_FEATURES_INDEX;
     double bestThreshold = 0.0;
     double bestGain = 0.0;
     
     findBestSplit(X, y, bestFeature, bestThreshold, bestGain);
     
-    if ((bestFeature == -1)
+    if ((bestFeature == RF_LEAF_FEATURES_INDEX)
     || (bestGain <= 0.0))
     {
-        node->featureIndex = -1;
+        node->featureIndex = RF_LEAF_FEATURES_INDEX;
         node->leafValue = calculateMean(y);
         return node;
     }
@@ -98,7 +102,7 @@ std::unique_ptr<TreeNode> DecisionTree::buildTree(
     if ((leftX.empty())
     || (rightX.empty()))
     {
-        node->featureIndex = -1;
+        node->featureIndex = RF_LEAF_FEATURES_INDEX;
         node->leafValue = calculateMean(y);
         return node;
     }
@@ -118,7 +122,7 @@ void DecisionTree::findBestSplit(
     double& bestThreshold,
     double& bestGain) const
 {
-    bestFeature = -1;
+    bestFeature = RF_LEAF_FEATURES_INDEX;
     bestThreshold = 0.0;
     bestGain = -std::numeric_limits<double>::infinity();
     

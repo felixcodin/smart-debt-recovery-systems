@@ -1,9 +1,15 @@
+// LoanAccount.cpp - Implementation
+
 #include "../../include/models/LoanAccount.h"
 #include "../../../common/include/exceptions/ValidationException.h"
 #include "../../../common/include/models/Money.h"
+#include "../../../common/include/utils/Constants.h"
 
 #include <sstream>
 #include <chrono>
+
+using namespace sdrs::constants;
+using namespace sdrs::exceptions;
 
 namespace sdrs::borrower
 {
@@ -11,23 +17,23 @@ void LoanAccount::validateConstructorArgs(int accountId,int borrowerId,double lo
 {
     if (accountId <= 0)
     {
-        throw sdrs::exceptions::ValidationException("Invalid account id", "accountId");
+        throw ValidationException("Invalid account id", "accountId");
     }
     if (borrowerId <= 0)
     {
-        throw sdrs::exceptions::ValidationException("Invalid borrower id", "borrowerId");
+        throw ValidationException("Invalid borrower id", "borrowerId");
     }
     if (loanAmount <= 0)
     {
-        throw sdrs::exceptions::ValidationException("Loan amount must be positive", "loanAmount");
+        throw ValidationException("Loan amount must be positive", "loanAmount");
     }
     if (interestRate < 0 || interestRate > 1)
     {
-        throw sdrs::exceptions::ValidationException("Interest rate must be between 0 and 1", "interestRate");
+        throw ValidationException("Interest rate must be between 0 and 1", "interestRate");
     }
     if (loanTermMonths <= 0)
     {
-        throw sdrs::exceptions::ValidationException("Loan term must be positive", "loanTermMonths");
+        throw ValidationException("Loan term must be positive", "loanTermMonths");
     }
 }
 
@@ -56,11 +62,11 @@ void LoanAccount::updateNextPaymentDueDate()
 }
 
 LoanAccount::LoanAccount(int accountId,
-                         int borrowerId,
-                         double loanAmount,
-                         double interestRate,
-                         int loanTermMonths):
-    _accountId(accountId),
+    int borrowerId,
+    double loanAmount,
+    double interestRate,
+    int loanTermMonths)
+    :_accountId(accountId),
     _borrowerId(borrowerId),
     _loanAmount(loanAmount),
     _initialAmount(loanAmount),
@@ -210,7 +216,7 @@ void LoanAccount::updateStatus(AccountStatus newStatus)
 {
     if (!canUpdateStatus(_accountStatus, newStatus))
     {
-        throw sdrs::exceptions::ValidationException("Invalid account status transition","accountStatus");
+        throw ValidationException("Invalid account status transition","accountStatus");
     }
     _accountStatus = newStatus;
     touch();
@@ -220,8 +226,8 @@ void LoanAccount::markPaymentMissed()
 {
     _numberOfMissedPayments++;
     _daysPastDue += PAYMENT_CYCLE_DAYS;
-    _lateFees += (_monthlyPaymentAmount * 0.02);
-    if (_daysPastDue >= 90)
+    _lateFees += (_monthlyPaymentAmount * recovery::LATE_FEE_RATE);
+    if (_daysPastDue >= risk::DPD_HIGH_THRESHOLD)
     {
         updateStatus(AccountStatus::Default);
     }
@@ -237,12 +243,12 @@ void LoanAccount::recordPayment(const sdrs::money::Money& amount)
 {
     if (amount <= sdrs::money::Money(0))
     {
-        throw sdrs::exceptions::ValidationException("Invalid payment amount","paymentAmount");
+        throw ValidationException("Invalid payment amount","paymentAmount");
     }
 
     if (amount > _remainingAmount)
     {
-        throw sdrs::exceptions::ValidationException("Payment exceeds remaining amount","paymentAmount");
+        throw ValidationException("Payment exceeds remaining amount","paymentAmount");
     }
     _remainingAmount -= amount;
     _totalPaidAmount += amount;
@@ -269,11 +275,11 @@ void LoanAccount::incrementDaysPastDue(int days)
         return;
     }
     _daysPastDue += days;
-    if (_daysPastDue >= 90)
+    if (_daysPastDue >= risk::DPD_HIGH_THRESHOLD)
     {
         updateStatus(AccountStatus::Default);
     }
-    else if (_daysPastDue >= 30)
+    else
     {
         updateStatus(AccountStatus::Delinquent);
     }
@@ -358,7 +364,7 @@ AccountStatus LoanAccount::stringToStatus(const std::string& statusStr)
     {
         return AccountStatus::Settled;
     }
-    throw sdrs::exceptions::ValidationException("Unknown account status string","accountStatus");
+    throw ValidationException("Unknown account status string","accountStatus");
 }
 
 std::string LoanAccount::toJson() const

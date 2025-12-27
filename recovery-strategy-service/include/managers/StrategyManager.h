@@ -1,3 +1,5 @@
+// StrategyManager.h - Orchestrates recovery strategies based on risk assessment
+
 #ifndef STRATEGY_MANAGER_H
 #define STRATEGY_MANAGER_H
 
@@ -10,6 +12,7 @@
 #include "../../../risk-assessment-service/include/algorithms/KMeansClustering.h"
 #include "../../../risk-assessment-service/include/models/RiskScorer.h"
 #include "../../../common/include/models/Money.h"
+#include "../../../common/include/utils/Constants.h"
 
 #include <memory>
 #include <vector>
@@ -18,13 +21,14 @@
 namespace sdrs::strategy
 {
     
+// Result of analyzing a borrower account
 struct AnalysisResult
 {
-    double riskScore;
-    sdrs::risk::RiskLevel riskLevel;
-    int clusterId;
-    double distanceToCluster;
-    StrategyType recommendedStrategy;
+    double riskScore;           // 0.0 (low risk) to 1.0 (high risk)
+    sdrs::constants::RiskLevel riskLevel;
+    int clusterId;              // K-Means cluster assignment
+    double distanceToCluster;   // distance to cluster centroid
+    sdrs::constants::StrategyType recommendedStrategy;
 };
 
 class StrategyManager
@@ -47,12 +51,15 @@ public:
 
     ~StrategyManager() = default;
 
+    // ML model training
 public:
-    void trainModels();
+    void trainModels();         // trains RandomForest + K-Means on synthetic data
     bool areModelsReady() const;
 
+    // Full analysis pipeline: risk scoring + clustering + strategy recommendation
     AnalysisResult analyzeAccount(const sdrs::risk::RiskFeatures& features);
 
+    // Analyze and execute strategy in one call
     StrategyStatus assignWithFullAnalysis(
         int accountId,
         int borrowerId,
@@ -60,26 +67,28 @@ public:
         const sdrs::risk::RiskFeatures& features
     );
 
+    // Strategy factory - creates strategy based on risk level
 public:
     std::unique_ptr<RecoveryStrategy> createStrategy(
         int accountId,
         int borrowerId,
         const sdrs::money::Money& amount,
-        sdrs::risk::RiskLevel riskLevel
+        sdrs::constants::RiskLevel riskLevel  // Low->Reminder, Medium->Settlement, High->Legal
     );
 
+    // Create, store, and execute strategy
     StrategyStatus assignAndExecute(
         int accountId,
         int borrowerId,
         const sdrs::money::Money& amount,
-        sdrs::risk::RiskLevel riskLevel
+        sdrs::constants::RiskLevel riskLevel
     );
 
-    RecoveryStrategy* getActiveStrategy(int accountId);
+    RecoveryStrategy* getActiveStrategy(int accountId);  // returns nullptr if not found
 
     bool hasActiveStrategy(int accountId) const;
 
-    bool cancelStrategy(int accountId);
+    bool cancelStrategy(int accountId);  // removes from active strategies
 
 private:
     std::vector<double> prepareClusterFeatures(
@@ -87,12 +96,12 @@ private:
         double riskScore
     ) const;
 
-    sdrs::risk::RiskLevel combineAnalysis(
+    sdrs::constants::RiskLevel combineAnalysis(
         double riskScore,
         int clusterId
     ) const;
 
-    sdrs::risk::RiskLevel clusterToRiskLevel(int clusterId) const;
+    sdrs::constants::RiskLevel clusterToRiskLevel(int clusterId) const;
 
     std::unique_ptr<RecoveryStrategy> createRemindersStrategy(
         int accountId, int borrowerId, const sdrs::money::Money& amount

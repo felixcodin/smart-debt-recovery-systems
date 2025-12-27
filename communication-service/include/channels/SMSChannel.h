@@ -1,3 +1,5 @@
+// SMSChannel.h - SMS communication channel implementation
+
 #ifndef SMS_CHANNEL_H
 #define SMS_CHANNEL_H
 
