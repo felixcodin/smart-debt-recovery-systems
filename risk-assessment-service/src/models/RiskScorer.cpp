@@ -1,11 +1,17 @@
+// RiskScorer.cpp - Implementation
+
 #include "../../include/models/RiskScorer.h"
 #include "../../include/algorithms/RandomForest.h"
 #include "../../../common/include/exceptions/ValidationException.h"
-
+#include "../../../common/include/utils/Constants.h"
 #include <cmath>
 #include <sstream>
 #include <algorithm>
 #include <iomanip>
+
+using namespace sdrs::constants;
+using namespace sdrs::exceptions;
+using namespace sdrs::borrower;
 
 namespace sdrs::risk
 {
@@ -22,7 +28,7 @@ RiskAssessment::RiskAssessment(int accountId,
 {
     if (score < 0.0 || score > 1.0)
     {
-        throw sdrs::exceptions::ValidationException(
+        throw ValidationException(
             "Risk score must be between 0 and 1", "riskScore"
         );
     }
@@ -36,11 +42,11 @@ RiskAssessment::RiskAssessment(int accountId,
 
 RiskLevel RiskAssessment::determineRiskLevel(double score) const
 {
-    if (score < 0.33)
+    if (score < constants::risk::LOW_RISK_MAX)
     {
         return RiskLevel::Low;
     }
-    if (score < 0.67)
+    if (score < constants::risk::MEDIUM_RISK_MAX)
     {
         return RiskLevel::Medium;   
     }
@@ -133,21 +139,21 @@ void RiskFeatures::validate() const
 {
     if (accountId <= 0)
     {
-        throw sdrs::exceptions::ValidationException("Invalid account ID", "accountId");
+        throw ValidationException("Invalid account ID", "accountId");
     }
     if (borrowerId <= 0)
     {
-        throw sdrs::exceptions::ValidationException("Invalid borrower ID", "borrowerId");
+        throw ValidationException("Invalid borrower ID", "borrowerId");
     }
-    if ((loanAmount < 0)
-    || (remainingAmount < 0))
+    if ((loanAmount.getAmount() < 0)
+    || (remainingAmount.getAmount() < 0))
     {
-        throw sdrs::exceptions::ValidationException("Negative amounts", "loanAmount");
+        throw ValidationException("Negative amounts", "loanAmount");
     }
     if ((interestRate < 0)
     || (interestRate > 1))
     {
-        throw sdrs::exceptions::ValidationException("Interest rate out of range", "interestRate");
+        throw ValidationException("Interest rate out of range", "interestRate");
     }
 }
 
@@ -203,7 +209,7 @@ std::vector<double> RiskScorer::extractFeatures(const RiskFeatures& input) const
 
     if (features.size() != EXPECTED_FEATURE)
     {
-        throw sdrs::exceptions::ValidationException("Feature size mismatch");
+        throw ValidationException("Feature size mismatch");
     }
 
     return features;
@@ -232,21 +238,21 @@ double RiskScorer::calculateRuleBasedScore(const RiskFeatures& features) const
 {
     double score = 0.0;
 
-    if (features.daysPastDue >= 90)
+    if (features.daysPastDue >= DPD_HIGH_THRESHOLD)
     {
         score += 0.40;
     }
-    else if (features.daysPastDue >= 60)
+    else if (features.daysPastDue >= DPD_MEDIUM_THRESHOLD)
     {
         score += 0.30;
     }
-    else if (features.daysPastDue >= 30)
+    else if (features.daysPastDue >= DPD_LOW_THRESHOLD)
     {
         score += 0.20;
     }
     else 
     {
-        score += features.daysPastDue / 90.0 * 0.20;
+        score += features.daysPastDue / DPD_DEFAULT_THRESHOLD * 0.20;
     }
     
     score += std::min(0.30, features.numberOfMissedPayments * 0.10);
@@ -264,7 +270,11 @@ void RiskScorer::trainModel()
 {
     if (!_randomForest)
     {
-        _randomForest = std::make_shared<RandomForest>(10, 7, 5);
+        _randomForest = std::make_shared<RandomForest>(
+            constants::risk::RF_NUM_TREES,
+            constants::risk::RF_MAX_DEPTH,
+            constants::risk::RF_MIN_SAMPLES_SPLIT
+        );
     }
     
     std::vector<std::vector<double>> X;
@@ -377,82 +387,82 @@ void RiskScorer::loadModel(const std::string& modelPath) { (void)modelPath; }
 bool RiskScorer::isModelReady() const { return _useMLModel && _isModelTrained && _randomForest && _randomForest->isTrained(); }
 void RiskScorer::setUseMLModel(bool useML) { _useMLModel = useML; }
 
-double RiskScorer::encodeEmploymentStatus(sdrs::borrower::EmploymentStatus status)
+double RiskScorer::encodeEmploymentStatus(EmploymentStatus status)
 {
     switch (status)
     {
-    case sdrs::borrower::EmploymentStatus::Employed:
-    case sdrs::borrower::EmploymentStatus::Contract:
-    case sdrs::borrower::EmploymentStatus::SelfEmployed:
+    case EmploymentStatus::Employed:
+    case EmploymentStatus::Contract:
+    case EmploymentStatus::SelfEmployed:
         return 1.0;
-    case sdrs::borrower::EmploymentStatus::PartTime:
-    case sdrs::borrower::EmploymentStatus::Student:
+    case EmploymentStatus::PartTime:
+    case EmploymentStatus::Student:
         return 0.5;
-    case sdrs::borrower::EmploymentStatus::Unemployed:
-    case sdrs::borrower::EmploymentStatus::Retired:
-    case sdrs::borrower::EmploymentStatus::None:
+    case EmploymentStatus::Unemployed:
+    case EmploymentStatus::Retired:
+    case EmploymentStatus::None:
         return 0.0;
     default:
         return 0.0;
     }
 }
 
-double RiskScorer::getEmploymentRiskContribution(sdrs::borrower::EmploymentStatus status)
+double RiskScorer::getEmploymentRiskContribution(EmploymentStatus status)
 {
     switch (status)
     {
-    case sdrs::borrower::EmploymentStatus::Employed:
-    case sdrs::borrower::EmploymentStatus::Contract:
-    case sdrs::borrower::EmploymentStatus::SelfEmployed:
+    case EmploymentStatus::Employed:
+    case EmploymentStatus::Contract:
+    case EmploymentStatus::SelfEmployed:
         return 0.0;
-    case sdrs::borrower::EmploymentStatus::PartTime:
-    case sdrs::borrower::EmploymentStatus::Student:
+    case EmploymentStatus::PartTime:
+    case EmploymentStatus::Student:
         return 0.05;
-    case sdrs::borrower::EmploymentStatus::Unemployed:
-    case sdrs::borrower::EmploymentStatus::Retired:
-    case sdrs::borrower::EmploymentStatus::None:
+    case EmploymentStatus::Unemployed:
+    case EmploymentStatus::Retired:
+    case EmploymentStatus::None:
         return 0.10;
     default:
         return 0.10;
     }
 }
 
-double RiskScorer::encodeAccountStatus(sdrs::borrower::AccountStatus status)
+double RiskScorer::encodeAccountStatus(AccountStatus status)
 {
     switch (status)
     {
-    case sdrs::borrower::AccountStatus::PaidOff:
-    case sdrs::borrower::AccountStatus::Current:
+    case AccountStatus::PaidOff:
+    case AccountStatus::Current:
         return 1.0;
-    case sdrs::borrower::AccountStatus::Partial:
+    case AccountStatus::Partial:
         return 0.8;
-    case sdrs::borrower::AccountStatus::Settled:
+    case AccountStatus::Settled:
         return 0.6;
-    case sdrs::borrower::AccountStatus::Delinquent:
+    case AccountStatus::Delinquent:
         return 0.4;
-    case sdrs::borrower::AccountStatus::Default:
-    case sdrs::borrower::AccountStatus::ChargedOff:
+    case AccountStatus::Default:
+    case AccountStatus::ChargedOff:
         return 0.0;
     default:
         return 0.5;
     }
 }
 
-double RiskScorer::getAccountRiskContribution(sdrs::borrower::AccountStatus status)
+double RiskScorer::getAccountRiskContribution(AccountStatus status)
 {
     switch (status)
     {
-    case sdrs::borrower::AccountStatus::PaidOff:
-    case sdrs::borrower::AccountStatus::Current:
+    case AccountStatus::PaidOff:
+    case AccountStatus::Current:
         return 0.0;
-    case sdrs::borrower::AccountStatus::Partial:
+    case AccountStatus::Partial:
         return 0.02;
-    case sdrs::borrower::AccountStatus::Settled:
+    case AccountStatus::Settled:
         return 0.04;
-    case sdrs::borrower::AccountStatus::Delinquent:
+    case AccountStatus::Delinquent:
         return 0.06;
-    case sdrs::borrower::AccountStatus::Default:
-    case sdrs::borrower::AccountStatus::ChargedOff:
+    case AccountStatus::Default:
+    case AccountStatus::ChargedOff:
         return 0.10;
     default:
         return 0.10;
