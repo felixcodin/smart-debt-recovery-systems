@@ -1,10 +1,15 @@
+// PaymentHistory.cpp - Implementation
+
 #include "../../include/models/PaymentHistory.h"
 #include "../../../common/include/models/Money.h"
 #include "../../../common/include/exceptions/ValidationException.h"
-
+#include "../../../common/include/utils/Constants.h"
 #include <sstream>
 #include <chrono>
 #include <string>
+
+using namespace sdrs::exceptions;
+using namespace sdrs::constants;
 
 namespace sdrs::borrower
 {
@@ -14,13 +19,14 @@ void PaymentHistory::touch()
     _updatedAt = std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now());
 }
 
-PaymentHistory::PaymentHistory(int paymentId,
-                               int accountId,
-                               const sdrs::money::Money& paymentAmount,
-                               PaymentMethod method,
-                               std::chrono::sys_days paymentDate,
-                               std::optional<std::chrono::sys_days> dueDate):
-    _paymentId(paymentId),
+PaymentHistory::PaymentHistory(
+    int paymentId,
+    int accountId,
+    const sdrs::money::Money& paymentAmount,
+    PaymentMethod method,
+    std::chrono::sys_days paymentDate,
+    std::optional<std::chrono::sys_days> dueDate)
+    :_paymentId(paymentId),
     _accountId(accountId),
     _paymentAmount(paymentAmount),
     _method(method),
@@ -33,7 +39,7 @@ PaymentHistory::PaymentHistory(int paymentId,
 
     if (!isValid())
     {
-        throw sdrs::exceptions::ValidationException(validate(), "PaymentHistory");
+        throw ValidationException(validate(), "PaymentHistory");
     }
 }
 
@@ -95,7 +101,7 @@ void PaymentHistory::markCompleted()
 {
     if (_status != PaymentStatus::Pending)
     {
-        throw sdrs::exceptions::ValidationException("Only pending payment can be completed", "paymentStatus");
+        throw ValidationException("Only pending payment can be completed", "paymentStatus");
     }
     _status = PaymentStatus::Completed;
     touch();
@@ -105,7 +111,7 @@ void PaymentHistory::markFailed(const std::string& reason)
 {
     if (_status != PaymentStatus::Pending)
     {
-        throw sdrs::exceptions::ValidationException("Only pending payment can be failed", "paymentStatus");
+        throw ValidationException("Only pending payment can be failed", "paymentStatus");
     }
     _status = PaymentStatus::Failed;
     _notes = reason;
@@ -116,7 +122,7 @@ void PaymentHistory::cancel(const std::string& reason)
 {
     if (_status == PaymentStatus::Completed)
     {
-        throw sdrs::exceptions::ValidationException("Completed payment cannot be cancelled", "paymentStatus");
+        throw ValidationException("Completed payment cannot be cancelled", "paymentStatus");
     }
     _status = PaymentStatus::Cancelled;
     _notes = reason;
@@ -171,25 +177,15 @@ std::string PaymentHistory::paymentStatusToString(PaymentStatus status)
     switch (status)
     {
         case PaymentStatus::Pending:
-        {
             return "Pending";
-        }
         case PaymentStatus::Completed:
-        {
             return "Completed";
-        }
         case PaymentStatus::Failed:
-        {
             return "Failed";
-        }
         case PaymentStatus::Cancelled:
-        {
             return "Cancelled";
-        }
         default:
-        {
             return "Unknown";
-        }
     }
 }
 
@@ -198,25 +194,15 @@ std::string PaymentHistory::paymentMethodToString(PaymentMethod method)
     switch (method)
     {
         case PaymentMethod::BankTransfer:
-        {
             return "BankTransfer";
-        }
         case PaymentMethod::Cash:
-        {
             return "Cash";
-        }   
         case PaymentMethod::Card:
-        {
             return "Card";
-        }
         case PaymentMethod::Other:
-        {
             return "Other";
-        }
         default:
-        {
             return "Unknown";
-        }
     }
 }
 
@@ -238,7 +224,7 @@ PaymentStatus PaymentHistory::stringToPaymentStatus(const std::string& value)
     {
         return PaymentStatus::Cancelled;
     }
-    throw sdrs::exceptions::ValidationException("Unknown payment status", "paymentStatus");
+    throw ValidationException("Unknown payment status", "paymentStatus");
 }
 
 PaymentMethod PaymentHistory::stringToPaymentMethod(const std::string& value)
@@ -259,7 +245,7 @@ PaymentMethod PaymentHistory::stringToPaymentMethod(const std::string& value)
     {
         return PaymentMethod::Other;
     }
-    throw sdrs::exceptions::ValidationException("Unknown payment method", "paymentMethod");
+    throw ValidationException("Unknown payment method", "paymentMethod");
 }
 
 } // namespace sdrs::borrower
