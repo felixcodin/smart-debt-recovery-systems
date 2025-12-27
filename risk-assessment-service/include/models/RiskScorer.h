@@ -1,3 +1,5 @@
+// RiskScorer.h - Risk assessment engine using ML (Random Forest) or rule-based scoring
+
 #ifndef RISK_SCORER_H
 #define RISK_SCORER_H
 
@@ -13,13 +15,6 @@
 
 namespace sdrs::risk
 {
-
-enum class RiskLevel
-{
-    Low, // < 0.33
-    Medium, // 0.33 - 0.67
-    High // >= 0.67
-};
 
 class RandomForest;
 
@@ -50,13 +45,13 @@ public:
     int getAssessmentId() const;
     int getAccountId() const;
     int getBorrowerId() const;
-    RiskLevel getRiskLevel() const;
-    double getRiskScore() const;
+    RiskLevel getRiskLevel() const;   // Low, Medium, High based on score thresholds
+    double getRiskScore() const;      // 0.0 to 1.0
     AlgorithmUsed getAlgorithmUsed() const;
     std::chrono::sys_seconds getAssessmentDate() const;
     std::chrono::sys_seconds getCreatedAt() const;
 
-    const std::map<std::string, double>& getRiskFactors() const;
+    const std::map<std::string, double>& getRiskFactors() const;  // breakdown of risk contributors
     void addRiskFactor(const std::string& factorName, double contribution);
 
     std::string toJson() const;
@@ -81,11 +76,11 @@ struct RiskFeatures
     int daysPastDue = 0;
     int numberOfMissedPayments = 0;
     int loanTermMonths = 0;
-    sdrs::borrower::AccountStatus accountStatus;
+    sdrs::constants::AccountStatus accountStatus;
 
     // Borrower data
     sdrs::money::Money monthlyIncome;
-    sdrs::borrower::EmploymentStatus employmentStatus;  // Enum: Employed, Unemployed, SelfEmployed, etc.
+    sdrs::constants::EmploymentStatus employmentStatus;  // Enum: Employed, Unemployed, SelfEmployed, etc.
 
     // Calculated metrics
     int accountAgeMonths;
@@ -118,20 +113,13 @@ public:
     RiskScorer();
     ~RiskScorer();
 
-    // Assess risk for a loan account, returns RiskAssessment with score, level, and factors
+    // Main API: assess risk and return full assessment result
     RiskAssessment assessRisk(const RiskFeatures& features);
 
-    // Train RandomForest model with synthetic data (10 trees, depth=7)
-    void trainModel();
-    
-    // Load pre-trained model from file (not yet implemented)
-    void loadModel(const std::string& modelPath);
-    
-    // Check if model is ready to use
+    void trainModel();   // trains RandomForest on synthetic data
+    void loadModel(const std::string& modelPath);  // TODO: load from file
     bool isModelReady() const;
-    
-    // Toggle ML model on/off (if off, falls back to rule-based scoring)
-    void setUseMLModel(bool useML);
+    void setUseMLModel(bool useML);  // if false, uses rule-based scoring
 
 private:
     std::vector<double> extractFeatures(const RiskFeatures& input) const;
@@ -142,11 +130,11 @@ private:
 
     std::map<std::string, double> calculateFeatureContributions(const RiskFeatures& features, double finalScore) const;
     
-    static double encodeEmploymentStatus(sdrs::borrower::EmploymentStatus status);
-    static double getEmploymentRiskContribution(sdrs::borrower::EmploymentStatus status);
+    static double encodeEmploymentStatus(sdrs::constants::EmploymentStatus status);
+    static double getEmploymentRiskContribution(sdrs::constants::EmploymentStatus status);
 
-    static double encodeAccountStatus(sdrs::borrower::AccountStatus status);
-    static double getAccountRiskContribution(sdrs::borrower::AccountStatus status);
+    static double encodeAccountStatus(sdrs::constants::AccountStatus status);
+    static double getAccountRiskContribution(sdrs::constants::AccountStatus status);
     
     // Generate synthetic training data for ML model
     void generateSyntheticData(

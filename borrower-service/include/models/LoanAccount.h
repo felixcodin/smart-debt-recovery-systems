@@ -1,21 +1,14 @@
+// LoanAccount.h - Domain entity representing a loan account with payment tracking
+
 #ifndef SDRS_BORROWER_LOANACCOUNT_H
 #define SDRS_BORROWER_LOANACCOUNT_H
+
 #include "../../../common/include/models/Money.h"
 #include <string>
 #include <chrono>
 
 namespace sdrs::borrower
 {
-enum class AccountStatus
-{
-    Current,
-    Delinquent,
-    Partial,
-    Default,
-    PaidOff,
-    ChargedOff,
-    Settled
-};
 
 class LoanAccount
 {
@@ -32,7 +25,7 @@ private:
     int _loanTermMonths;
     std::chrono::sys_seconds _lastPaymentDate{};
     std::chrono::sys_seconds _nextPaymentDueDate{};
-    AccountStatus _accountStatus{AccountStatus::Current};
+    sdrs::constants::AccountStatus _accountStatus{sdrs::constants::AccountStatus::Current};
     int _daysPastDue{0};
     int _numberOfMissedPayments{0};
     std::chrono::sys_seconds _loanStartDate;
@@ -60,7 +53,7 @@ public:
     sdrs::money::Money getLateFees() const;
     double getInterestRate() const;
     int getLoanTermMonths() const;
-    AccountStatus getStatus() const;
+    sdrs::constants::AccountStatus getStatus() const;
     int getDaysPastDue() const;
     int getMissedPayments() const;
     std::chrono::sys_seconds getLoanStartDate() const;
@@ -70,19 +63,20 @@ public:
     std::chrono::sys_seconds getLastPaymentDate() const;
     std::chrono::sys_seconds getNextPaymentDueDate() const;
 
+    // Status and payment operations
 public:
-    void updateStatus(AccountStatus newStatus);
-    bool canUpdateStatus(AccountStatus fromStatus,AccountStatus toStatus) const;
-    void markPaymentMissed();
-    void recordPayment(const sdrs::money::Money& amount);
+    void updateStatus(sdrs::constants::AccountStatus newStatus);  // validates transition
+    bool canUpdateStatus(sdrs::constants::AccountStatus fromStatus,sdrs::constants::AccountStatus toStatus) const;
+    void markPaymentMissed();      // increments DPD, adds late fees
+    void recordPayment(const sdrs::money::Money& amount);  // reduces remaining balance
     void incrementDaysPastDue(int days);
-    bool isTerminalStatus() const;
-    bool isFullyPaid() const;
+    bool isTerminalStatus() const; // PaidOff, ChargedOff, Settled
+    bool isFullyPaid() const;      // remaining == 0
 
 public:
     std::string toJson() const;
-    static std::string statusToString(AccountStatus status);
-    static AccountStatus stringToStatus(const std::string& statusStr);
+    static std::string statusToString(sdrs::constants::AccountStatus status);
+    static sdrs::constants::AccountStatus stringToStatus(const std::string& statusStr);
 };
 } 
 #endif
