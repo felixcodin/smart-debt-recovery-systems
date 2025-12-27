@@ -1,3 +1,5 @@
+// VoiceCallChannel.h - Voice call communication channel implementation
+
 #ifndef VOICE_CALL_CHANNEL_H
 #define VOICE_CALL_CHANNEL_H
 

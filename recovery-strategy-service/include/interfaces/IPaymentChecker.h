@@ -1,3 +1,5 @@
+// IPaymentChecker.h - Interface for checking payment status
+
 #ifndef INTERFACE_PAYMENT_CHECKER_H
 #define INTERFACE_PAYMENT_CHECKER_H
 

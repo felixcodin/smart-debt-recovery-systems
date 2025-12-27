@@ -1,3 +1,5 @@
+// ICommunicationService.h - Interface for sending messages to borrowers
+
 #ifndef INTERFACE_COMMUNICATION_SERVICE_H
 #define INTERFACE_COMMUNICATION_SERVICE_H
 
