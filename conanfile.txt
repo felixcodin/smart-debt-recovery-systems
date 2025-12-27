@@ -1,0 +1,14 @@
+[requires]
+nlohmann_json/3.11.3
+cpp-httplib/0.15.3
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[options]
+cpp-httplib/*:with_openssl=False
+cpp-httplib/*:with_zlib=False
+
+[layout]
+cmake_layout
