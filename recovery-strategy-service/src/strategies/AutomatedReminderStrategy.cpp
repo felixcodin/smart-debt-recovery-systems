@@ -1,16 +1,23 @@
+// AutomatedReminderStrategy.cpp - Implementation
+
 #include "../../include/strategies/AutomatedReminderStrategy.h"
 #include "../../../common/include/exceptions/ValidationException.h"
 
 #include <iostream>
+
+using namespace sdrs::constants;
+using namespace sdrs::exceptions;
+using namespace sdrs::money;
+using namespace sdrs::communication;
 
 namespace sdrs::strategy
 {
 
 AutomatedReminderStrategy::AutomatedReminderStrategy(int accountId,
     int borrowerId,
-    const sdrs::money::Money& expectedAmount,
+    const Money& expectedAmount,
     std::shared_ptr<IPaymentChecker> paymentChecker,
-    std::shared_ptr<sdrs::communication::ICommunicationService> channel,
+    std::shared_ptr<ICommunicationService> channel,
     int maxReminders,
     int intervalDays)
     : RecoveryStrategy(accountId, borrowerId, expectedAmount),
@@ -21,27 +28,27 @@ AutomatedReminderStrategy::AutomatedReminderStrategy(int accountId,
 {
     if (accountId < 0)
     {
-        throw sdrs::exceptions::ValidationException("Account ID cannot be negative", "AutomatedStrategy", sdrs::exceptions::ErrorCode::InvalidFormat);
+        throw ValidationException("Account ID cannot be negative", "AutomatedStrategy", ValidationErrorCode::InvalidFormat);
     }
 
     if (borrowerId < 0)
     {
-        throw sdrs::exceptions::ValidationException("Borrower ID cannot be negative", "AutomatedStrategy", sdrs::exceptions::ErrorCode::InvalidFormat);
+        throw ValidationException("Borrower ID cannot be negative", "AutomatedStrategy", ValidationErrorCode::InvalidFormat);
     }
     
     if (maxReminders < 0)
     {
-        throw sdrs::exceptions::ValidationException("Max Reminders cannot be negative", "AutomatedStrategy", sdrs::exceptions::ErrorCode::InvalidFormat);
+        throw ValidationException("Max Reminders cannot be negative", "AutomatedStrategy", ValidationErrorCode::InvalidFormat);
     }
 
     if (intervalDays < 0)
     {
-        throw sdrs::exceptions::ValidationException("Interval Days cannot be negative", "AutomatedStrategy", sdrs::exceptions::ErrorCode::InvalidFormat);
+        throw ValidationException("Interval Days cannot be negative", "AutomatedStrategy", ValidationErrorCode::InvalidFormat);
     }
 
     if (!_paymentChecker)
     {
-        throw sdrs::exceptions::ValidationException("Payment checker cannot be null", "PaymentChecker");
+        throw ValidationException("Payment checker cannot be null", "PaymentChecker");
     }
 }
 
@@ -105,7 +112,7 @@ std::string AutomatedReminderStrategy::statusToString() const
         return "Pending";
     }
 
-    throw sdrs::exceptions::ValidationException("Invalid strategy status", "AutomatedReminderStrategy");
+    throw ValidationException("Invalid strategy status", "AutomatedReminderStrategy");
 }
 
 std::string AutomatedReminderStrategy::toJson() const

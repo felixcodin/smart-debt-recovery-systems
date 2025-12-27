@@ -1,8 +1,15 @@
+// LegalActionStrategy.cpp - Implementation
+
 #include "../../include/strategies/LegalActionStrategy.h"
 #include "../../../common/include/exceptions/ValidationException.h"
 
 #include <random>
 #include <format>
+
+using namespace sdrs::constants;
+using namespace sdrs::exceptions;
+using namespace sdrs::money;
+using namespace sdrs::communication;
 
 namespace sdrs::strategy
 {
@@ -10,24 +17,31 @@ namespace sdrs::strategy
 LegalActionStrategy::LegalActionStrategy(
     int accountId,
     int borrowerId,
-    const sdrs::money::Money& expectedAmount,
+    const Money& expectedAmount,
     std::shared_ptr<IPaymentChecker> paymentChecker,
-    std::shared_ptr<sdrs::communication::ICommunicationService> channel,
-    const std::string& lawFirm)
+    std::shared_ptr<ICommunicationService> channel,
+    const std::string& lawFirm,
+    int maxLegalAttempt)
     :  RecoveryStrategy(accountId, borrowerId, expectedAmount),
     _paymentChecker(paymentChecker),
     _channel(channel),
     _lawFirm(lawFirm),
-    _legalStage(LegalStage::NotStarted)
+    _legalStage(LegalStage::NotStarted),
+    _maxLegalAttempt(maxLegalAttempt)
 {
     if (lawFirm.empty())
     {
-        throw sdrs::exceptions::ValidationException("Law firm name cannot be empty", "LegalActionStrategy");
+        throw ValidationException("Law firm name cannot be empty", "LegalActionStrategy");
     }
 
     if (!_paymentChecker)
     {
-        throw sdrs::exceptions::ValidationException("Payment checker cannot be null", "LegalActionStrategy");
+        throw ValidationException("Payment checker cannot be null", "LegalActionStrategy");
+    }
+
+    if (maxLegalAttempt < 0)
+    {
+        throw ValidationException("Legal Attempt cannot be negative", "LegalActionStrategy");
     }
 }
 
@@ -57,9 +71,10 @@ void LegalActionStrategy::sendLegalNotice()
     );
     _legalStage = LegalStage::NoticesSent;
     std::string message = std::format(
-        "LEGAL NOTICE\n Amount owed:{}\n Law firm: {}\n Notice: Pay within 30 days or legal action will be taken!\n",
-        _expectedAmount.formatUSD(),
-        _lawFirm
+        "LEGAL NOTICE\n Amount owed:{}\n Law firm: {}\n Notice: Pay within {} days or legal action will be taken!\n",
+        _expectedAmount.format(),
+        _lawFirm,
+        recovery::LEGAL_NOTICE_DEADLINE_DAYS
     );
     _channel->sendMessage(_accountId, message);
 }
@@ -91,16 +106,27 @@ StrategyStatus LegalActionStrategy::execute()
 
     _status = StrategyStatus::Active;
 
-    sendLegalNotice();
+    while (_attemptCount < _maxLegalAttempt)
+    {
+        if (checkPaymentReceived())
+        {
+            _status = StrategyStatus::Completed;
+            return _status;
+        }
+        sendLegalNotice();
+        fileLawsuit();
+        _attemptCount++;
+    }
 
     if (checkPaymentReceived())
     {
         _status = StrategyStatus::Completed;
-        return _status;
+    }
+    else
+    {
+        _status = StrategyStatus::Failed;
     }
 
-    fileLawsuit();
-    _status = StrategyStatus::Completed;
     return _status;
 }
 
@@ -128,7 +154,7 @@ std::string LegalActionStrategy::legalStageToString() const
         return "NotStarted";
     }
 
-    throw sdrs::exceptions::ValidationException("Invalid legal stage", "LegalActionStrategy");
+    throw ValidationException("Invalid legal stage", "LegalActionStrategy");
 }
 
 std::string LegalActionStrategy::toJson() const
