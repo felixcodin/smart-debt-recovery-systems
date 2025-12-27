@@ -1,6 +1,11 @@
+// PaymentCheckerImpl.cpp - Implementation
+
 #include "../../include/services/PaymentCheckerImpl.h"
 #include "../../../common/include/exceptions/ValidationException.h"
+#include "../../../common/include/utils/Constants.h"
 
+using namespace sdrs::exceptions;
+using namespace sdrs::constants;
 
 namespace sdrs::borrower
 {
@@ -9,7 +14,7 @@ PaymentCheckerImpl::PaymentCheckerImpl(std::shared_ptr<IBorrowerRepository> repo
 {
     if (!repo)
     {
-        throw sdrs::exceptions::ValidationException("Repository cannot be null", "PaymentChecker", sdrs::exceptions::ErrorCode::InvalidFormat);
+        throw ValidationException("Repository cannot be null", "PaymentChecker", ValidationErrorCode::InvalidFormat);
     }
 }
  
