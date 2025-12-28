@@ -7,6 +7,8 @@
 #include <sstream>
 #include <chrono>
 #include <string>
+#include <format>
+#include <nlohmann/json.hpp>
 
 using namespace sdrs::exceptions;
 using namespace sdrs::constants;
@@ -161,15 +163,74 @@ std::string PaymentHistory::toJson() const
 {
     std::ostringstream oss;
     oss << "{";
-    oss << "\"paymentId\":" << _paymentId << ",";
-    oss << "\"accountId\":" << _accountId << ",";
-    oss << "\"amount\":" << _paymentAmount.getAmount() << ",";
-    oss << "\"amountFormatted\":\"" << _paymentAmount.format() << "\",";
-    oss << "\"method\":\"" << paymentMethodToString(_method) << "\",";
-    oss << "\"status\":\"" << paymentStatusToString(_status) << "\",";
-    oss << "\"isLate\":" << (isLate() ? "true" : "false");
+    oss << "\"payment_id\":" << _paymentId << ",";
+    oss << "\"account_id\":" << _accountId << ",";
+    oss << "\"payment_amount\":" << _paymentAmount.getAmount() << ",";
+    oss << "\"payment_method\":\"" << sdrs::constants::paymentMethodToString(_method) << "\",";
+    oss << "\"payment_status\":\"" << paymentStatusToString(_status) << "\",";
+    oss << "\"payment_date\":\"" << std::format("{:%Y-%m-%d}", _paymentDate) << "\",";
+    if (_dueDate.has_value()) {
+        oss << "\"due_date\":\"" << std::format("{:%Y-%m-%d}", _dueDate.value()) << "\",";
+    }
+    oss << "\"is_late\":" << (isLate() ? "true" : "false") << ",";
+    if (!_notes.empty()) {
+        oss << "\"notes\":\"" << _notes << "\",";
+    }
+    oss << "\"created_at\":\"" << std::format("{:%Y-%m-%d %H:%M:%S}", _createdAt) << "\",";
+    oss << "\"updated_at\":\"" << std::format("{:%Y-%m-%d %H:%M:%S}", _updatedAt) << "\"";
     oss << "}";
     return oss.str();
+}
+
+PaymentHistory PaymentHistory::fromJson(const std::string& json)
+{
+    auto j = nlohmann::json::parse(json);
+    
+    int paymentId = j.value("payment_id", j.value("paymentId", 0));
+    int accountId = j.value("account_id", j.value("accountId", 0));
+    double amount = j["payment_amount"].get<double>();
+    
+    PaymentMethod method = PaymentMethod::Cash;
+    if (j.contains("payment_method") && !j["payment_method"].is_null())
+    {
+        std::string methodStr = j["payment_method"].get<std::string>();
+        method = sdrs::constants::stringToPaymentMethod(methodStr);
+    }
+    
+    std::chrono::sys_days paymentDate = std::chrono::floor<std::chrono::days>(std::chrono::system_clock::now());
+    if (j.contains("payment_date") && !j["payment_date"].is_null())
+    {
+        std::string dateStr = j["payment_date"].get<std::string>();
+        std::istringstream iss(dateStr);
+        std::chrono::sys_days parsed;
+        std::chrono::from_stream(iss, "%Y-%m-%d", parsed);
+        paymentDate = parsed;
+    }
+    
+    std::optional<std::chrono::sys_days> dueDate;
+    if (j.contains("due_date") && !j["due_date"].is_null())
+    {
+        std::string dateStr = j["due_date"].get<std::string>();
+        std::istringstream iss(dateStr);
+        std::chrono::sys_days parsed;
+        std::chrono::from_stream(iss, "%Y-%m-%d", parsed);
+        dueDate = parsed;
+    }
+    
+    PaymentHistory payment(paymentId, accountId, sdrs::money::Money(amount), method, paymentDate, dueDate);
+    
+    if (j.contains("payment_status") && !j["payment_status"].is_null())
+    {
+        std::string statusStr = j["payment_status"].get<std::string>();
+        payment._status = stringToPaymentStatus(statusStr);
+    }
+    
+    if (j.contains("notes") && !j["notes"].is_null())
+    {
+        payment._notes = j["notes"].get<std::string>();
+    }
+    
+    return payment;
 }
 
 std::string PaymentHistory::paymentStatusToString(PaymentStatus status)

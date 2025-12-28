@@ -75,6 +75,7 @@ public:
 
 public:
     std::string toJson() const;
+    static LoanAccount fromJson(const std::string& json);
     static std::string statusToString(sdrs::constants::AccountStatus status);
     static sdrs::constants::AccountStatus stringToStatus(const std::string& statusStr);
 };

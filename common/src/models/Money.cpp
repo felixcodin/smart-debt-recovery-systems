@@ -7,6 +7,7 @@
 #include <locale>
 #include <cmath>
 #include <iomanip>
+#include <nlohmann/json.hpp>
 
 using namespace sdrs::exceptions;
 using namespace sdrs::constants;
@@ -199,6 +200,30 @@ std::istream& operator>>(std::istream& is, Money& money)
 std::string Money::toString() const
 {
     return format();
+}
+
+std::string Money::toJson() const
+{
+    nlohmann::json j;
+    j["amount"] = _amount;
+    j["currency"] = (_moneyType == MoneyType::VND) ? "VND" : "USD";
+    return j.dump();
+}
+
+Money Money::fromJson(const std::string& json)
+{
+    auto j = nlohmann::json::parse(json);
+    
+    double amount = j["amount"].get<double>();
+    
+    MoneyType type = MoneyType::VND;
+    if (j.contains("currency") && !j["currency"].is_null())
+    {
+        std::string currency = j["currency"].get<std::string>();
+        type = (currency == "USD") ? MoneyType::USD : MoneyType::VND;
+    }
+    
+    return Money(amount, type);
 }
 
 bool Money::operator>=(const Money& other) const

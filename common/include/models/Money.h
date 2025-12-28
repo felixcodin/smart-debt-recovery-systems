@@ -48,6 +48,8 @@ public:
     friend std::istream& operator>>(std::istream& is, Money& money);
 
     std::string toString() const;
+    std::string toJson() const;
+    static Money fromJson(const std::string& json);
 
 };
 
