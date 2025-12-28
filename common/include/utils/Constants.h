@@ -300,6 +300,113 @@ enum class MoneyType
 };
 
 // ============================================================================
+// ENUM CONVERSION FUNCTIONS
+// ============================================================================
+
+// EmploymentStatus conversions
+inline std::string employmentStatusToString(EmploymentStatus status)
+{
+    switch (status)
+    {
+        case EmploymentStatus::Employed: return "Employed";
+        case EmploymentStatus::Unemployed: return "Unemployed";
+        case EmploymentStatus::SelfEmployed: return "SelfEmployed";
+        case EmploymentStatus::Student: return "Student";
+        case EmploymentStatus::Retired: return "Retired";
+        case EmploymentStatus::Contract: return "Contract";
+        case EmploymentStatus::PartTime: return "PartTime";
+        case EmploymentStatus::None: return "None";
+        default: return "None";
+    }
+}
+
+inline EmploymentStatus stringToEmploymentStatus(const std::string& str)
+{
+    if (str == "Employed") return EmploymentStatus::Employed;
+    if (str == "Unemployed") return EmploymentStatus::Unemployed;
+    if (str == "SelfEmployed") return EmploymentStatus::SelfEmployed;
+    if (str == "Student") return EmploymentStatus::Student;
+    if (str == "Retired") return EmploymentStatus::Retired;
+    if (str == "Contract") return EmploymentStatus::Contract;
+    if (str == "PartTime") return EmploymentStatus::PartTime;
+    return EmploymentStatus::None;
+}
+
+// InactiveReason conversions
+inline std::string inactiveReasonToString(InactiveReason reason)
+{
+    switch (reason)
+    {
+        case InactiveReason::PaidOff: return "PaidOff";
+        case InactiveReason::AccountClosed: return "AccountClosed";
+        case InactiveReason::Deceased: return "Deceased";
+        case InactiveReason::Fraud: return "Fraud";
+        case InactiveReason::LegalAction: return "LegalAction";
+        case InactiveReason::None: return "None";
+        default: return "None";
+    }
+}
+
+inline InactiveReason stringToInactiveReason(const std::string& str)
+{
+    if (str == "PaidOff") return InactiveReason::PaidOff;
+    if (str == "AccountClosed") return InactiveReason::AccountClosed;
+    if (str == "Deceased") return InactiveReason::Deceased;
+    if (str == "Fraud") return InactiveReason::Fraud;
+    if (str == "LegalAction") return InactiveReason::LegalAction;
+    return InactiveReason::None;
+}
+
+// AccountStatus conversions
+inline std::string accountStatusToString(AccountStatus status)
+{
+    switch (status)
+    {
+        case AccountStatus::Current: return "Current";
+        case AccountStatus::Delinquent: return "Delinquent";
+        case AccountStatus::Partial: return "Partial";
+        case AccountStatus::Default: return "Default";
+        case AccountStatus::PaidOff: return "PaidOff";
+        case AccountStatus::ChargedOff: return "ChargedOff";
+        case AccountStatus::Settled: return "Settled";
+        default: return "Current";
+    }
+}
+
+inline AccountStatus stringToAccountStatus(const std::string& str)
+{
+    if (str == "Current") return AccountStatus::Current;
+    if (str == "Delinquent") return AccountStatus::Delinquent;
+    if (str == "Partial") return AccountStatus::Partial;
+    if (str == "Default") return AccountStatus::Default;
+    if (str == "PaidOff") return AccountStatus::PaidOff;
+    if (str == "ChargedOff") return AccountStatus::ChargedOff;
+    if (str == "Settled") return AccountStatus::Settled;
+    return AccountStatus::Current;
+}
+
+// PaymentMethod conversions
+inline std::string paymentMethodToString(PaymentMethod method)
+{
+    switch (method)
+    {
+        case PaymentMethod::BankTransfer: return "BankTransfer";
+        case PaymentMethod::Cash: return "Cash";
+        case PaymentMethod::Card: return "Card";
+        case PaymentMethod::Other: return "Other";
+        default: return "Other";
+    }
+}
+
+inline PaymentMethod stringToPaymentMethod(const std::string& str)
+{
+    if (str == "BankTransfer") return PaymentMethod::BankTransfer;
+    if (str == "Cash") return PaymentMethod::Cash;
+    if (str == "Card") return PaymentMethod::Card;
+    return PaymentMethod::Other;
+}
+
+// ============================================================================
 // TIME CONSTANTS
 // ============================================================================
 namespace time
@@ -355,6 +462,17 @@ namespace api
     // Rate limiting
     inline constexpr int RATE_LIMIT_REQUESTS_PER_MINUTE = 60;
     inline constexpr int RATE_LIMIT_WINDOW_SECONDS = 60;
+}
+
+// ============================================================================
+// STATUS CODES
+// ============================================================================
+namespace status_codes
+{
+    inline constexpr int OK = 200;
+    inline constexpr int BAD_REQUEST = 400;
+    inline constexpr int NOT_FOUND = 404;
+    inline constexpr int INTERNAL_SEVER_ERROR = 500;
 }
 
 
