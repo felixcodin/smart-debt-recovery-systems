@@ -74,7 +74,7 @@ public:
 
 public:
     std::string toJson() const;
-    // static Borrower fromJson(const std::string& json);
+    static Borrower fromJson(const std::string& json);
 
 };
 

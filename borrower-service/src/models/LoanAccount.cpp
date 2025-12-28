@@ -7,6 +7,8 @@
 
 #include <sstream>
 #include <chrono>
+#include <format>
+#include <nlohmann/json.hpp>
 
 using namespace sdrs::constants;
 using namespace sdrs::exceptions;
@@ -371,18 +373,66 @@ std::string LoanAccount::toJson() const
 {
     std::ostringstream oss;
     oss << "{";
-    oss << "\"accountId\":" << _accountId << ",";
-    oss << "\"borrowerId\":" << _borrowerId << ",";
-    oss << "\"remainingAmount\":" << _remainingAmount.getAmount() << ",";
-    oss << "\"monthlyPaymentAmount\":" << _monthlyPaymentAmount.getAmount() << ",";
-    oss << "\"totalPaidAmount\":" << _totalPaidAmount.getAmount() << ",";
-    oss << "\"lateFees\":" << _lateFees.getAmount() << ",";
-    oss << "\"loanTermMonths\":" << _loanTermMonths << ",";
-    oss << "\"daysPastDue\":" << _daysPastDue << ",";
-    oss << "\"missedPayments\":" << _numberOfMissedPayments << ",";
-    oss << "\"status\":\"" << statusToString(_accountStatus) << "\"";
+    oss << "\"account_id\":" << _accountId << ",";
+    oss << "\"borrower_id\":" << _borrowerId << ",";
+    oss << "\"loan_amount\":" << _loanAmount.getAmount() << ",";
+    oss << "\"initial_amount\":" << _initialAmount.getAmount() << ",";
+    oss << "\"interest_rate\":" << _interestRate << ",";
+    oss << "\"remaining_amount\":" << _remainingAmount.getAmount() << ",";
+    oss << "\"loan_start_date\":\"" << std::format("{:%Y-%m-%d %H:%M:%S}", _loanStartDate) << "\",";
+    oss << "\"loan_end_date\":\"" << std::format("{:%Y-%m-%d %H:%M:%S}", _loanEndDate) << "\",";
+    oss << "\"account_status\":\"" << sdrs::constants::accountStatusToString(_accountStatus) << "\",";
+    oss << "\"days_past_due\":" << _daysPastDue << ",";
+    oss << "\"number_of_missed_payments\":" << _numberOfMissedPayments << ",";
+    oss << "\"created_at\":\"" << std::format("{:%Y-%m-%d %H:%M:%S}", _createdAt) << "\",";
+    oss << "\"updated_at\":\"" << std::format("{:%Y-%m-%d %H:%M:%S}", _updatedAt) << "\"";
     oss << "}";
     return oss.str();
+}
+
+LoanAccount LoanAccount::fromJson(const std::string& json)
+{
+    auto j = nlohmann::json::parse(json);
+    
+    int accountId = j.value("account_id", j.value("accountId", 0));
+    int borrowerId = j.value("borrower_id", j.value("borrowerId", 0));
+    double loanAmount = j["loan_amount"].get<double>();
+    double interestRate = j["interest_rate"].get<double>();
+    
+    // Calculate loan term from start/end dates if provided, otherwise default to 12 months
+    int loanTermMonths = 12;
+    if (j.contains("loan_start_date") && j.contains("loan_end_date"))
+    {
+        // For MVP, simplified calculation
+        loanTermMonths = 12; // Can be enhanced later
+    }
+    
+    LoanAccount account(accountId, borrowerId, loanAmount, interestRate, loanTermMonths);
+    
+    // Update optional fields from schema
+    if (j.contains("remaining_amount") && !j["remaining_amount"].is_null())
+    {
+        double remaining = j["remaining_amount"].get<double>();
+        account._remainingAmount = sdrs::money::Money(remaining);
+    }
+    
+    if (j.contains("days_past_due") && !j["days_past_due"].is_null())
+    {
+        account._daysPastDue = j["days_past_due"].get<int>();
+    }
+    
+    if (j.contains("number_of_missed_payments") && !j["number_of_missed_payments"].is_null())
+    {
+        account._numberOfMissedPayments = j["number_of_missed_payments"].get<int>();
+    }
+    
+    if (j.contains("account_status") && !j["account_status"].is_null())
+    {
+        std::string status = j["account_status"].get<std::string>();
+        account._accountStatus = sdrs::constants::stringToAccountStatus(status);
+    }
+    
+    return account;
 }
 
 } 

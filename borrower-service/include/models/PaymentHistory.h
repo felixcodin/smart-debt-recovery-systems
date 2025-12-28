@@ -59,6 +59,7 @@ public:
 
 public:
     std::string toJson() const;
+    static PaymentHistory fromJson(const std::string& json);
     static std::string paymentStatusToString(sdrs::constants::PaymentStatus status);
     static std::string paymentMethodToString(sdrs::constants::PaymentMethod method);
     static sdrs::constants::PaymentStatus stringToPaymentStatus(const std::string& value);

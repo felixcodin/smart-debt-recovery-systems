@@ -29,6 +29,6 @@ add_subdirectory(borrower-service)
 add_subdirectory(communication-service)
 add_subdirectory(api-gateway)
 
-# TODO: Fix code errors before enabling
+# TODO Phase 2+: Fix code errors in these services
 # add_subdirectory(recovery-strategy-service)
 # add_subdirectory(risk-assessment-service)

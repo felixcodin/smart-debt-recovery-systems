@@ -6,6 +6,7 @@
 #include <regex>
 #include <cmath>
 #include <sstream>
+#include <nlohmann/json.hpp>
 
 using namespace sdrs::constants;
 using namespace sdrs::exceptions;
@@ -272,26 +273,86 @@ void Borrower::setDateOfBirth(const std::string& dobString)
 
 std::string Borrower::toJson() const
 {
-    std::ostringstream oss;
-    oss << "{"
-        << "\"id\":" << _id << ","
-        << "\"firstName\":\"" << _firstName << "\","
-        << "\"lastName\":\"" << _lastName << "\","
-        << "\"email\":\"" << _email << "\","
-        << "\"isActive\":" << (_isActive ? "true" : "false")
-        << "}";
-
-    return oss.str();
+    nlohmann::json j;
+    j["borrower_id"] = _id;
+    j["first_name"] = _firstName;
+    j["last_name"] = _lastName;
+    j["email"] = _email;
+    j["phone_number"] = _phoneNumber;
+    j["address"] = _address;
+    j["date_of_birth"] = std::format("{:%Y-%m-%d}", _dateOfBirth);
+    j["employment_status"] = sdrs::constants::employmentStatusToString(_employmentStatus);
+    j["monthly_income"] = _monthlyIncome;
+    j["is_active"] = _isActive;
+    j["inactive_reason"] = sdrs::constants::inactiveReasonToString(_inactiveReason);
+    j["created_at"] = std::format("{:%Y-%m-%d %H:%M:%S}", _createdAt);
+    j["updated_at"] = std::format("{:%Y-%m-%d %H:%M:%S}", _updatedAt);
+    if (!_isActive && _inactivatedAt.time_since_epoch().count() > 0)
+    {
+        j["inactivated_at"] = std::format("{:%Y-%m-%d %H:%M:%S}", _inactivatedAt);
+    }
+    
+    return j.dump();
 }
 
-/*
 Borrower Borrower::fromJson(const std::string& json)
 {
-    // TODO:
-    // Parser JSON string
-    // Extract fields
-    // Create and return Borrower object
+    auto j = nlohmann::json::parse(json);
+    
+    // Required fields
+    int id = j.value("borrower_id", j.value("id", 0));
+    std::string firstName = j["first_name"].get<std::string>();
+    std::string lastName = j["last_name"].get<std::string>();
+    
+    Borrower borrower(id, firstName, lastName);
+    
+    // Optional fields from schema
+    if (j.contains("email") && !j["email"].is_null())
+    {
+        borrower.setEmail(j["email"].get<std::string>());
+    }
+    
+    if (j.contains("phone_number") && !j["phone_number"].is_null())
+    {
+        borrower.setPhoneNumber(j["phone_number"].get<std::string>());
+    }
+    
+    if (j.contains("address") && !j["address"].is_null())
+    {
+        borrower.setAddress(j["address"].get<std::string>());
+    }
+    
+    if (j.contains("date_of_birth") && !j["date_of_birth"].is_null())
+    {
+        borrower.setDateOfBirth(j["date_of_birth"].get<std::string>());
+    }
+    
+    if (j.contains("employment_status") && !j["employment_status"].is_null())
+    {
+        std::string status = j["employment_status"].get<std::string>();
+        borrower.setEmploymentStatus(sdrs::constants::stringToEmploymentStatus(status));
+    }
+    
+    if (j.contains("monthly_income") && !j["monthly_income"].is_null())
+    {
+        borrower.setMonthlyIncome(j["monthly_income"].get<double>());
+    }
+    
+    if (j.contains("is_active") && !j["is_active"].is_null())
+    {
+        bool active = j["is_active"].get<bool>();
+        if (active)
+        {
+            borrower.setActive();
+        }
+        else if (j.contains("inactive_reason") && !j["inactive_reason"].is_null())
+        {
+            std::string reason = j["inactive_reason"].get<std::string>();
+            borrower.setInactive(sdrs::constants::stringToInactiveReason(reason));
+        }
+    }
+    
+    return borrower;
 }
-*/
 
 }
