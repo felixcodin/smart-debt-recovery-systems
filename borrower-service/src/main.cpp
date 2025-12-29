@@ -5,6 +5,7 @@
 #include "../../common/include/utils/Constants.h"
 #include "../../common/include/models/Response.h"
 #include "../include/models/Borrower.h"
+#include "../include/models/LoanAccount.h"
 #include "../include/repositories/BorrowerRepository.h"
 
 using json = nlohmann::json;
@@ -155,6 +156,117 @@ int main() {
         }
         catch (const std::exception& e) {
             auto response = Response<void>::error(std::string("Failed to retrieve borrowers: ") + e.what());
+            res.status = response.getStatusCode();
+            res.set_content(response.toJson(), "application/json");
+        }
+    });
+    
+    // POST /loans/:accountId/payment - Record payment for a loan account
+    server.Post(R"(/loans/(\d+)/payment)", [](const httplib::Request& req, httplib::Response& res) {
+        try {
+            int accountId = std::stoi(req.matches[1]);
+            auto j = json::parse(req.body);
+            
+            double amount = j["amount"].get<double>();
+            
+            // Mock: Create a loan account and record payment
+            // In real implementation, would fetch from repository
+            sdrs::borrower::LoanAccount account(accountId, 1, 10000.0, 0.05, 12);
+            account.recordPayment(sdrs::money::Money(amount));
+            
+            json response = {
+                {"success", true},
+                {"message", "Payment recorded successfully"},
+                {"status_code", 200},
+                {"data", {
+                    {"account_id", accountId},
+                    {"payment_amount", amount},
+                    {"remaining_balance", account.getRemainingAmount().getAmount()}
+                }}
+            };
+            
+            res.set_content(response.dump(), "application/json");
+        }
+        catch (const std::exception& e) {
+            auto response = Response<void>::error(std::string("Failed to record payment: ") + e.what());
+            res.status = response.getStatusCode();
+            res.set_content(response.toJson(), "application/json");
+        }
+    });
+    
+    // POST /loans/:accountId/missed-payment - Mark payment as missed
+    server.Post(R"(/loans/(\d+)/missed-payment)", [](const httplib::Request& req, httplib::Response& res) {
+        try {
+            int accountId = std::stoi(req.matches[1]);
+            
+            // Mock: Create a loan account and mark payment missed
+            sdrs::borrower::LoanAccount account(accountId, 1, 10000.0, 0.05, 12);
+            account.markPaymentMissed();
+            
+            json response = {
+                {"success", true},
+                {"message", "Payment marked as missed"},
+                {"status_code", 200},
+                {"data", {
+                    {"account_id", accountId},
+                    {"days_past_due", account.getDaysPastDue()},
+                    {"missed_payments", account.getMissedPayments()},
+                    {"late_fees", account.getLateFees().getAmount()},
+                    {"status", sdrs::borrower::LoanAccount::statusToString(account.getStatus())}
+                }}
+            };
+            
+            res.set_content(response.dump(), "application/json");
+        }
+        catch (const std::exception& e) {
+            auto response = Response<void>::error(std::string("Failed to mark missed payment: ") + e.what());
+            res.status = response.getStatusCode();
+            res.set_content(response.toJson(), "application/json");
+        }
+    });
+    
+    // POST /borrowers/:id/assess-risk - Assess risk for a borrower (calls risk-assessment-service)
+    server.Post(R"(/borrowers/(\d+)/assess-risk)", [](const httplib::Request& req, httplib::Response& res) {
+        try {
+            int borrowerId = std::stoi(req.matches[1]);
+            auto j = json::parse(req.body);
+            
+            // Prepare request for risk-assessment-service
+            json riskRequest = {
+                {"account_id", j["account_id"].get<int>()},
+                {"borrower_id", borrowerId},
+                {"days_past_due", j["days_past_due"].get<int>()},
+                {"missed_payments", j["missed_payments"].get<int>()},
+                {"loan_amount", j["loan_amount"].get<double>()},
+                {"remaining_amount", j["remaining_amount"].get<double>()},
+                {"interest_rate", j["interest_rate"].get<double>()},
+                {"monthly_income", j["monthly_income"].get<double>()},
+                {"account_age_months", j["account_age_months"].get<int>()}
+            };
+            
+            // Call risk-assessment-service
+            httplib::Client client("localhost", sdrs::constants::ports::RISK_SERVICE_PORT);
+            auto riskRes = client.Post("/assess-risk", riskRequest.dump(), "application/json");
+            
+            if (riskRes && riskRes->status == 200) {
+                auto riskJson = json::parse(riskRes->body);
+                
+                json response = {
+                    {"success", true},
+                    {"message", "Risk assessment completed"},
+                    {"status_code", 200},
+                    {"data", riskJson["data"]}
+                };
+                
+                res.set_content(response.dump(), "application/json");
+            } else {
+                auto response = Response<void>::error("Failed to assess risk: Risk service unavailable");
+                res.status = 503;
+                res.set_content(response.toJson(), "application/json");
+            }
+        }
+        catch (const std::exception& e) {
+            auto response = Response<void>::error(std::string("Risk assessment failed: ") + e.what());
             res.status = response.getStatusCode();
             res.set_content(response.toJson(), "application/json");
         }

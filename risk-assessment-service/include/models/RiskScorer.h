@@ -10,6 +10,7 @@
 #include <chrono>
 
 #include "../../../common/include/models/Money.h"
+#include "../../../common/include/utils/Constants.h"
 #include "../../../borrower-service/include/models/Borrower.h"
 #include "../../../borrower-service/include/models/LoanAccount.h"
 
@@ -31,7 +32,7 @@ private:
     int _accountId;
     int _borrowerId;
     double _riskScore;
-    RiskLevel _riskLevel;
+    sdrs::constants::RiskLevel _riskLevel;
     AlgorithmUsed _algorithmUsed;
     std::map<std::string, double> _riskFactors;
     std::chrono::sys_seconds _assessmentDate;
@@ -45,7 +46,7 @@ public:
     int getAssessmentId() const;
     int getAccountId() const;
     int getBorrowerId() const;
-    RiskLevel getRiskLevel() const;   // Low, Medium, High based on score thresholds
+    sdrs::constants::RiskLevel getRiskLevel() const;   // Low, Medium, High based on score thresholds
     double getRiskScore() const;      // 0.0 to 1.0
     AlgorithmUsed getAlgorithmUsed() const;
     std::chrono::sys_seconds getAssessmentDate() const;
@@ -55,11 +56,11 @@ public:
     void addRiskFactor(const std::string& factorName, double contribution);
 
     std::string toJson() const;
-    static std::string riskLevelToString(RiskLevel level);
-    static RiskLevel stringToRiskLevel(const std::string& levelStr);
+    static std::string riskLevelToString(sdrs::constants::RiskLevel level);
+    static sdrs::constants::RiskLevel stringToRiskLevel(const std::string& levelStr);
 
 private:
-    RiskLevel determineRiskLevel(double score) const;
+    sdrs::constants::RiskLevel determineRiskLevel(double score) const;
     void touch();
 
 };

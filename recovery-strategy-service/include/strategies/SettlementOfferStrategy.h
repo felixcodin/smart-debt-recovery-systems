@@ -18,12 +18,12 @@ namespace sdrs::strategy
 class SettlementOfferStrategy : public RecoveryStrategy
 {
 private:
+    std::shared_ptr<IPaymentChecker> _paymentChecker;
+    std::shared_ptr<sdrs::communication::ICommunicationService> _channel;
+
     double _discountRate;
     int _offerValidDays;
     sdrs::money::Money _minimumAcceptableAmount;
-
-    std::shared_ptr<IPaymentChecker> _paymentChecker;
-    std::shared_ptr<sdrs::communication::ICommunicationService> _channel;
 
     int _maxSettlementAttempt = 0;
 
@@ -40,8 +40,8 @@ public:
     );
 
 public:
-    StrategyStatus execute() override;  // sends discount offer, checks for acceptance
-    StrategyType getType() const override;
+    sdrs::constants::StrategyStatus execute() override;  // sends discount offer, checks for acceptance
+    sdrs::constants::StrategyType getType() const override;
     std::string toJson() const override;
 
 private:

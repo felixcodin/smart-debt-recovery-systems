@@ -17,14 +17,14 @@ namespace sdrs::strategy
 class LegalActionStrategy : public RecoveryStrategy
 {
 private:
+    std::shared_ptr<IPaymentChecker> _paymentChecker;
+    std::shared_ptr<sdrs::communication::ICommunicationService> _channel;
+
     std::string _lawFirm;
     std::string _caseNumber;
     sdrs::constants::LegalStage _legalStage;
     std::chrono::sys_days _noticeDate;
     std::chrono::sys_days _filingDate;
-
-    std::shared_ptr<IPaymentChecker> _paymentChecker;
-    std::shared_ptr<sdrs::communication::ICommunicationService> _channel;
 
     int _maxLegalAttempt = 0;
 
@@ -40,8 +40,8 @@ public:
     );
 
 public:
-    StrategyStatus execute() override;  // sends legal notice, then files lawsuit if needed
-    StrategyType getType() const override;
+    sdrs::constants::StrategyStatus execute() override;  // sends legal notice, then files lawsuit if needed
+    sdrs::constants::StrategyType getType() const override;
     std::string toJson() const override;
 
     sdrs::constants::LegalStage getLegalStage() const;

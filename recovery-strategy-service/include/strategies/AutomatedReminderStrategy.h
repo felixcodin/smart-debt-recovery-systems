@@ -15,11 +15,11 @@ namespace sdrs::strategy
 class AutomatedReminderStrategy : public RecoveryStrategy
 {
 private:
-    int _maxReminders = 0;
-    int _intervalDays = 0;
-    
     std::shared_ptr<IPaymentChecker> _paymentChecker;
     std::shared_ptr<sdrs::communication::ICommunicationService> _channel;
+
+    int _maxReminders = 0;
+    int _intervalDays = 0;
 
 public:
     AutomatedReminderStrategy(int accountId,

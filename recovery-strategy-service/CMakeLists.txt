@@ -11,8 +11,8 @@ set(RECOVERY_STRATEGY_SERVICE_SOURCES
     src/strategies/SettlementOfferStrategy.cpp
     src/strategies/LegalActionStrategy.cpp
     
-    # Managers
-    src/managers/StrategyManager.cpp
+    # Managers - TODO Phase 3: Uncomment when RiskScorer is linked
+    # src/managers/StrategyManager.cpp
 )
 
 # Header files (for IDE support)

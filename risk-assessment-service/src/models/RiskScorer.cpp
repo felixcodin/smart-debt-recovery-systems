@@ -10,6 +10,7 @@
 #include <iomanip>
 
 using namespace sdrs::constants;
+using namespace sdrs::constants::risk;
 using namespace sdrs::exceptions;
 using namespace sdrs::borrower;
 
@@ -469,7 +470,7 @@ double RiskScorer::getAccountRiskContribution(AccountStatus status)
     }
 }
 
-std::map<std::string, double> RiskScorer::calculateFeatureContributions(const RiskFeatures& features, double finalScore) const
+std::map<std::string, double> RiskScorer::calculateFeatureContributions(const RiskFeatures& features, double /* finalScore */) const
 {
     std::map<std::string, double> contributions;
     

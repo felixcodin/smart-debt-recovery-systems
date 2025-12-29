@@ -45,6 +45,11 @@ build/
 cmake-build-*/
 out/
 
+# Runtime logs and PID files
+logs/
+*.log
+*.pid
+
 # Conan
 CMakeUserPresets.json
 graph_info.json
