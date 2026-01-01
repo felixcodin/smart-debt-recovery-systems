@@ -26,6 +26,9 @@ set(COMMON_HEADERS
     include/models/Money.h
     include/models/Response.h
     
+    # Database
+    include/database/DatabaseManager.h
+    
     # Exceptions
     include/exceptions/ValidationException.h
     include/exceptions/DatabaseException.h
@@ -40,9 +43,13 @@ target_include_directories(sdrs_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Find libpqxx
+find_package(libpqxx QUIET)
+
 # Link dependencies
 target_link_libraries(sdrs_common PUBLIC
     nlohmann_json::nlohmann_json
+    $<$<TARGET_EXISTS:libpqxx::pqxx>:libpqxx::pqxx>
 )
 
 # Set properties

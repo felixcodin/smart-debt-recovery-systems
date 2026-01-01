@@ -58,6 +58,8 @@ public:
     int getMissedPayments() const;
     std::chrono::sys_seconds getLoanStartDate() const;
     std::chrono::sys_seconds getLoanEndDate() const;
+    std::string getLoanStartDateString() const;  // Returns YYYY-MM-DD format
+    std::string getLoanEndDateString() const;    // Returns YYYY-MM-DD format
     std::chrono::sys_seconds getCreatedAt() const;
     std::chrono::sys_seconds getUpdatedAt() const;
     std::chrono::sys_seconds getLastPaymentDate() const;

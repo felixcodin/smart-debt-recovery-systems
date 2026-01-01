@@ -12,6 +12,12 @@ set(COMMUNICATION_SERVICE_SOURCES
     
     # Managers
     src/managers/CommunicationManager.cpp
+    
+    # Models
+    src/models/CommunicationLog.cpp
+    
+    # Repositories
+    src/repositories/CommunicationLogRepository.cpp
 )
 
 # Header files (for IDE support)
@@ -27,6 +33,12 @@ set(COMMUNICATION_SERVICE_HEADERS
     
     # Managers
     include/managers/CommunicationManager.h
+    
+    # Models
+    include/models/CommunicationLog.h
+    
+    # Repositories
+    include/repositories/CommunicationLogRepository.h
 )
 
 # Create executable

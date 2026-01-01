@@ -12,6 +12,8 @@ set(BORROWER_SERVICE_SOURCES
     
     # Repositories
     src/repositories/BorrowerRepository.cpp
+    src/repositories/LoanAccountRepository.cpp
+    src/repositories/PaymentHistoryRepository.cpp
     
     # Services
     src/services/PaymentCheckerImpl.cpp
@@ -26,6 +28,8 @@ set(BORROWER_SERVICE_HEADERS
     
     # Repositories
     include/repositories/BorrowerRepository.h
+    include/repositories/LoanAccountRepository.h
+    include/repositories/PaymentHistoryRepository.h
     include/interfaces/IBorrowerRepository.h
     
     # Services
@@ -44,7 +48,7 @@ target_include_directories(borrower_service PRIVATE
 target_link_libraries(borrower_service PRIVATE
     sdrs_common
     nlohmann_json::nlohmann_json
-    # libpqxx::pqxx  # TODO: Add when libpqxx is available
+    $<$<TARGET_EXISTS:libpqxx::pqxx>:libpqxx::pqxx>
     httplib::httplib
 )
 

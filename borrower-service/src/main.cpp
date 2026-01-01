@@ -4,20 +4,58 @@
 #include "../../common/include/utils/Logger.h"
 #include "../../common/include/utils/Constants.h"
 #include "../../common/include/models/Response.h"
+#include "../../common/include/database/DatabaseManager.h"
 #include "../include/models/Borrower.h"
 #include "../include/models/LoanAccount.h"
+#include "../include/models/PaymentHistory.h"
 #include "../include/repositories/BorrowerRepository.h"
+#include "../include/repositories/LoanAccountRepository.h"
+#include "../include/repositories/PaymentHistoryRepository.h"
 
 using json = nlohmann::json;
 using sdrs::models::Response;
 using sdrs::borrower::Borrower;
 using sdrs::borrower::BorrowerRepository;
+using sdrs::borrower::LoanAccountRepository;
+using sdrs::borrower::PaymentHistoryRepository;
+
+/**
+ * @brief Check if database mode is enabled via environment variable
+ * @return true if SDRS_USE_DATABASE is set to "1" or "true"
+ */
+bool isDatabaseEnabled() {
+    const char* useDb = std::getenv("SDRS_USE_DATABASE");
+    if (!useDb) return false;
+    std::string value(useDb);
+    return value == "1" || value == "true" || value == "TRUE";
+}
 
 int main() {
     std::cout << "Starting Borrower Service..." << std::endl;
     
+    // Check if database mode is enabled
+    bool useMock = !isDatabaseEnabled();
+    
+    if (!useMock) {
+        sdrs::utils::Logger::Info("Database mode enabled - initializing connection pool...");
+        try {
+            // Initialize database connection
+            [[maybe_unused]] auto& db = sdrs::database::DatabaseManager::getInstance();
+            sdrs::utils::Logger::Info("Database connection pool initialized successfully");
+        }
+        catch (const std::exception& e) {
+            sdrs::utils::Logger::Error("Failed to initialize database: " + std::string(e.what()));
+            sdrs::utils::Logger::Info("Falling back to mock mode");
+            useMock = true;
+        }
+    } else {
+        sdrs::utils::Logger::Info("Running in mock mode (set SDRS_USE_DATABASE=1 to enable database)");
+    }
+    
     httplib::Server server;
-    BorrowerRepository repository;
+    BorrowerRepository borrowerRepo(useMock);
+    LoanAccountRepository loanRepo(useMock);
+    PaymentHistoryRepository paymentRepo(useMock);
     
     // Health check endpoint
     server.Get("/health", [](const httplib::Request&, httplib::Response& res) {
@@ -34,13 +72,16 @@ int main() {
     });
     
     // POST /borrowers - Create new borrower
-    server.Post("/borrowers", [&repository](const httplib::Request& req, httplib::Response& res) {
+    server.Post("/borrowers", [&borrowerRepo](const httplib::Request& req, httplib::Response& res) {
         try {
+            // Log the incoming request body for debugging
+            sdrs::utils::Logger::Info("Received POST /borrowers request with body: " + req.body);
+            
             // Parse request body
             auto borrower = Borrower::fromJson(req.body);
             
             // Create in repository
-            auto created = repository.create(borrower);
+            auto created = borrowerRepo.create(borrower);
             
             // Return success response
             auto response = Response<Borrower>::success(created, "Borrower created successfully", 201);
@@ -48,6 +89,7 @@ int main() {
             res.set_content(response.toJson(), "application/json");
         }
         catch (const std::exception& e) {
+            sdrs::utils::Logger::Error("Failed to create borrower: " + std::string(e.what()));
             auto response = Response<Borrower>::badRequest(std::string("Failed to create borrower: ") + e.what());
             res.status = response.getStatusCode();
             res.set_content(response.toJson(), "application/json");
@@ -55,11 +97,11 @@ int main() {
     });
     
     // GET /borrowers/:id - Get borrower by ID
-    server.Get(R"(/borrowers/(\d+))", [&repository](const httplib::Request& req, httplib::Response& res) {
+    server.Get(R"(/borrowers/(\d+))", [&borrowerRepo](const httplib::Request& req, httplib::Response& res) {
         try {
             int id = std::stoi(req.matches[1]);
             
-            auto borrower = repository.findById(id);
+            auto borrower = borrowerRepo.findById(id);
             
             if (borrower.has_value()) {
                 auto response = Response<Borrower>::success(borrower.value(), "Borrower found");
@@ -80,7 +122,7 @@ int main() {
     });
     
     // PUT /borrowers/:id - Update borrower
-    server.Put(R"(/borrowers/(\d+))", [&repository](const httplib::Request& req, httplib::Response& res) {
+    server.Put(R"(/borrowers/(\d+))", [&borrowerRepo](const httplib::Request& req, httplib::Response& res) {
         try {
             int id = std::stoi(req.matches[1]);
             
@@ -96,7 +138,7 @@ int main() {
             }
             
             // Update in repository
-            auto updated = repository.update(borrower);
+            auto updated = borrowerRepo.update(borrower);
             
             auto response = Response<Borrower>::success(updated, "Borrower updated successfully");
             res.status = response.getStatusCode();
@@ -110,11 +152,11 @@ int main() {
     });
     
     // DELETE /borrowers/:id - Delete borrower
-    server.Delete(R"(/borrowers/(\d+))", [&repository](const httplib::Request& req, httplib::Response& res) {
+    server.Delete(R"(/borrowers/(\d+))", [&borrowerRepo](const httplib::Request& req, httplib::Response& res) {
         try {
             int id = std::stoi(req.matches[1]);
             
-            bool deleted = repository.deleteById(id);
+            bool deleted = borrowerRepo.deleteById(id);
             
             if (deleted) {
                 auto response = Response<void>::success("Borrower deleted successfully");
@@ -135,9 +177,9 @@ int main() {
     });
     
     // GET /borrowers - Get all borrowers
-    server.Get("/borrowers", [&repository](const httplib::Request&, httplib::Response& res) {
+    server.Get("/borrowers", [&borrowerRepo](const httplib::Request&, httplib::Response& res) {
         try {
-            auto borrowers = repository.findAll();
+            auto borrowers = borrowerRepo.findAll();
             
             // Build JSON array
             json j = json::array();
@@ -162,17 +204,34 @@ int main() {
     });
     
     // POST /loans/:accountId/payment - Record payment for a loan account
-    server.Post(R"(/loans/(\d+)/payment)", [](const httplib::Request& req, httplib::Response& res) {
+    server.Post(R"(/loans/(\d+)/payment)", [&loanRepo, &paymentRepo](const httplib::Request& req, httplib::Response& res) {
         try {
             int accountId = std::stoi(req.matches[1]);
             auto j = json::parse(req.body);
             
             double amount = j["amount"].get<double>();
             
-            // Mock: Create a loan account and record payment
-            // In real implementation, would fetch from repository
-            sdrs::borrower::LoanAccount account(accountId, 1, 10000.0, 0.05, 12);
+            // Find existing loan account
+            auto accountOpt = loanRepo.findById(accountId);
+            
+            if (!accountOpt.has_value()) {
+                auto response = Response<void>::notFound("Loan account not found with ID: " + std::to_string(accountId));
+                res.status = response.getStatusCode();
+                res.set_content(response.toJson(), "application/json");
+                return;
+            }
+            
+            // Record payment in loan account
+            auto account = accountOpt.value();
             account.recordPayment(sdrs::money::Money(amount));
+            loanRepo.update(account);
+            
+            // Also record in payment history
+            auto today = std::chrono::floor<std::chrono::days>(std::chrono::system_clock::now());
+            sdrs::borrower::PaymentHistory payment(0, accountId, sdrs::money::Money(amount),
+                sdrs::constants::PaymentMethod::BankTransfer, today);
+            payment.markCompleted();
+            paymentRepo.create(payment);
             
             json response = {
                 {"success", true},
@@ -195,13 +254,23 @@ int main() {
     });
     
     // POST /loans/:accountId/missed-payment - Mark payment as missed
-    server.Post(R"(/loans/(\d+)/missed-payment)", [](const httplib::Request& req, httplib::Response& res) {
+    server.Post(R"(/loans/(\d+)/missed-payment)", [&loanRepo](const httplib::Request& req, httplib::Response& res) {
         try {
             int accountId = std::stoi(req.matches[1]);
             
-            // Mock: Create a loan account and mark payment missed
-            sdrs::borrower::LoanAccount account(accountId, 1, 10000.0, 0.05, 12);
+            // Find existing loan account
+            auto accountOpt = loanRepo.findById(accountId);
+            
+            if (!accountOpt.has_value()) {
+                auto response = Response<void>::notFound("Loan account not found with ID: " + std::to_string(accountId));
+                res.status = response.getStatusCode();
+                res.set_content(response.toJson(), "application/json");
+                return;
+            }
+            
+            auto account = accountOpt.value();
             account.markPaymentMissed();
+            loanRepo.update(account);
             
             json response = {
                 {"success", true},
@@ -220,6 +289,117 @@ int main() {
         }
         catch (const std::exception& e) {
             auto response = Response<void>::error(std::string("Failed to mark missed payment: ") + e.what());
+            res.status = response.getStatusCode();
+            res.set_content(response.toJson(), "application/json");
+        }
+    });
+    
+    // GET /loans - Get all loan accounts
+    server.Get("/loans", [&loanRepo](const httplib::Request&, httplib::Response& res) {
+        try {
+            auto accounts = loanRepo.findAll();
+            
+            json j = json::array();
+            for (const auto& account : accounts) {
+                j.push_back(json::parse(account.toJson()));
+            }
+            
+            json response = {
+                {"success", true},
+                {"message", "Loan accounts retrieved successfully"},
+                {"status_code", 200},
+                {"data", j}
+            };
+            
+            res.set_content(response.dump(), "application/json");
+        }
+        catch (const std::exception& e) {
+            auto response = Response<void>::error(std::string("Failed to retrieve loans: ") + e.what());
+            res.status = response.getStatusCode();
+            res.set_content(response.toJson(), "application/json");
+        }
+    });
+    
+    // GET /loans/delinquent - Get delinquent loan accounts
+    server.Get("/loans/delinquent", [&loanRepo](const httplib::Request& req, httplib::Response& res) {
+        try {
+            int minDaysPastDue = 1;
+            if (req.has_param("min_days")) {
+                minDaysPastDue = std::stoi(req.get_param_value("min_days"));
+            }
+            
+            auto accounts = loanRepo.findDelinquent(minDaysPastDue);
+            
+            json j = json::array();
+            for (const auto& account : accounts) {
+                j.push_back(json::parse(account.toJson()));
+            }
+            
+            json response = {
+                {"success", true},
+                {"message", "Delinquent accounts retrieved successfully"},
+                {"status_code", 200},
+                {"count", accounts.size()},
+                {"data", j}
+            };
+            
+            res.set_content(response.dump(), "application/json");
+        }
+        catch (const std::exception& e) {
+            auto response = Response<void>::error(std::string("Failed to retrieve delinquent loans: ") + e.what());
+            res.status = response.getStatusCode();
+            res.set_content(response.toJson(), "application/json");
+        }
+    });
+    
+    // GET /payments - Get all payments
+    server.Get("/payments", [&paymentRepo](const httplib::Request&, httplib::Response& res) {
+        try {
+            auto payments = paymentRepo.findAll();
+            
+            json j = json::array();
+            for (const auto& payment : payments) {
+                j.push_back(json::parse(payment.toJson()));
+            }
+            
+            json response = {
+                {"success", true},
+                {"message", "Payments retrieved successfully"},
+                {"status_code", 200},
+                {"data", j}
+            };
+            
+            res.set_content(response.dump(), "application/json");
+        }
+        catch (const std::exception& e) {
+            auto response = Response<void>::error(std::string("Failed to retrieve payments: ") + e.what());
+            res.status = response.getStatusCode();
+            res.set_content(response.toJson(), "application/json");
+        }
+    });
+    
+    // GET /payments/late - Get late payments
+    server.Get("/payments/late", [&paymentRepo](const httplib::Request&, httplib::Response& res) {
+        try {
+            auto payments = paymentRepo.findLatePayments();
+            
+            json j = json::array();
+            for (const auto& payment : payments) {
+                j.push_back(json::parse(payment.toJson()));
+            }
+            
+            json response = {
+                {"success", true},
+                {"message", "Late payments retrieved successfully"},
+                {"status_code", 200},
+                {"count", payments.size()},
+                {"data", j}
+            };
+            
+            res.set_content(response.dump(), "application/json");
+        }
+        catch (const std::exception& e) {
+            auto response = Response<void>::error(std::string("Failed to retrieve late payments: ") + e.what());
             res.status = response.getStatusCode();
             res.set_content(response.toJson(), "application/json");
         }

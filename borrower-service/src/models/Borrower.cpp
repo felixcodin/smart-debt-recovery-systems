@@ -253,6 +253,17 @@ std::chrono::year_month_day Borrower::getDateOfBirth() const
     return std::chrono::year_month_day{_dateOfBirth};
 }
 
+std::string Borrower::getDateOfBirthString() const
+{
+    std::chrono::year_month_day ymd{_dateOfBirth};
+    std::ostringstream oss;
+    oss << std::format("{:04d}-{:02d}-{:02d}", 
+                       static_cast<int>(ymd.year()), 
+                       static_cast<unsigned>(ymd.month()), 
+                       static_cast<unsigned>(ymd.day()));
+    return oss.str();
+}
+
 void Borrower::setDateOfBirth(const std::string& dobString)
 {
     std::istringstream iss(dobString);
@@ -297,62 +308,139 @@ std::string Borrower::toJson() const
 
 Borrower Borrower::fromJson(const std::string& json)
 {
-    auto j = nlohmann::json::parse(json);
-    
-    // Required fields
-    int id = j.value("borrower_id", j.value("id", 0));
-    std::string firstName = j["first_name"].get<std::string>();
-    std::string lastName = j["last_name"].get<std::string>();
-    
-    Borrower borrower(id, firstName, lastName);
-    
-    // Optional fields from schema
-    if (j.contains("email") && !j["email"].is_null())
-    {
-        borrower.setEmail(j["email"].get<std::string>());
-    }
-    
-    if (j.contains("phone_number") && !j["phone_number"].is_null())
-    {
-        borrower.setPhoneNumber(j["phone_number"].get<std::string>());
-    }
-    
-    if (j.contains("address") && !j["address"].is_null())
-    {
-        borrower.setAddress(j["address"].get<std::string>());
-    }
-    
-    if (j.contains("date_of_birth") && !j["date_of_birth"].is_null())
-    {
-        borrower.setDateOfBirth(j["date_of_birth"].get<std::string>());
-    }
-    
-    if (j.contains("employment_status") && !j["employment_status"].is_null())
-    {
-        std::string status = j["employment_status"].get<std::string>();
-        borrower.setEmploymentStatus(sdrs::constants::stringToEmploymentStatus(status));
-    }
-    
-    if (j.contains("monthly_income") && !j["monthly_income"].is_null())
-    {
-        borrower.setMonthlyIncome(j["monthly_income"].get<double>());
-    }
-    
-    if (j.contains("is_active") && !j["is_active"].is_null())
-    {
-        bool active = j["is_active"].get<bool>();
-        if (active)
-        {
-            borrower.setActive();
+    try {
+        auto j = nlohmann::json::parse(json);
+        
+        // Required fields - support both camelCase and snake_case
+        int id = j.value("borrower_id", j.value("id", 0));
+        
+        // Support both firstName and first_name
+        std::string firstName;
+        if (j.contains("firstName")) {
+            if (j["firstName"].is_null()) {
+                throw std::runtime_error("Field 'firstName' cannot be null");
+            }
+            firstName = j["firstName"].get<std::string>();
+        } else if (j.contains("first_name")) {
+            if (j["first_name"].is_null()) {
+                throw std::runtime_error("Field 'first_name' cannot be null");
+            }
+            firstName = j["first_name"].get<std::string>();
+        } else {
+            throw std::runtime_error("Missing required field: firstName or first_name");
         }
-        else if (j.contains("inactive_reason") && !j["inactive_reason"].is_null())
-        {
-            std::string reason = j["inactive_reason"].get<std::string>();
-            borrower.setInactive(sdrs::constants::stringToInactiveReason(reason));
+        
+        // Support both lastName and last_name
+        std::string lastName;
+        if (j.contains("lastName")) {
+            if (j["lastName"].is_null()) {
+                throw std::runtime_error("Field 'lastName' cannot be null");
+            }
+            lastName = j["lastName"].get<std::string>();
+        } else if (j.contains("last_name")) {
+            if (j["last_name"].is_null()) {
+                throw std::runtime_error("Field 'last_name' cannot be null");
+            }
+            lastName = j["last_name"].get<std::string>();
+        } else {
+            throw std::runtime_error("Missing required field: lastName or last_name");
         }
+        
+        Borrower borrower(id, firstName, lastName);
+        
+        // Optional fields - support both camelCase and snake_case
+        // Only set if field exists AND is not null
+        if (j.contains("email") && !j["email"].is_null())
+        {
+            borrower.setEmail(j["email"].get<std::string>());
+        }
+        
+        // Support both phoneNumber and phone_number
+        if (j.contains("phoneNumber") && !j["phoneNumber"].is_null())
+        {
+            borrower.setPhoneNumber(j["phoneNumber"].get<std::string>());
+        }
+        else if (j.contains("phone_number") && !j["phone_number"].is_null())
+        {
+            borrower.setPhoneNumber(j["phone_number"].get<std::string>());
+        }
+        
+        if (j.contains("address") && !j["address"].is_null())
+        {
+            borrower.setAddress(j["address"].get<std::string>());
+        }
+        
+        // Support both dateOfBirth and date_of_birth
+        if (j.contains("dateOfBirth") && !j["dateOfBirth"].is_null())
+        {
+            borrower.setDateOfBirth(j["dateOfBirth"].get<std::string>());
+        }
+        else if (j.contains("date_of_birth") && !j["date_of_birth"].is_null())
+        {
+            borrower.setDateOfBirth(j["date_of_birth"].get<std::string>());
+        }
+        
+        // Support both employmentStatus and employment_status
+        if (j.contains("employmentStatus") && !j["employmentStatus"].is_null())
+        {
+            std::string status = j["employmentStatus"].get<std::string>();
+            borrower.setEmploymentStatus(sdrs::constants::stringToEmploymentStatus(status));
+        }
+        else if (j.contains("employment_status") && !j["employment_status"].is_null())
+        {
+            std::string status = j["employment_status"].get<std::string>();
+            borrower.setEmploymentStatus(sdrs::constants::stringToEmploymentStatus(status));
+        }
+        
+        // Support both monthlyIncome and monthly_income
+        if (j.contains("monthlyIncome") && !j["monthlyIncome"].is_null())
+        {
+            borrower.setMonthlyIncome(j["monthlyIncome"].get<double>());
+        }
+        else if (j.contains("monthly_income") && !j["monthly_income"].is_null())
+        {
+            borrower.setMonthlyIncome(j["monthly_income"].get<double>());
+        }
+        
+        // Support both isActive and is_active
+        bool hasActiveField = false;
+        bool isActive = true;
+        
+        if (j.contains("isActive") && !j["isActive"].is_null())
+        {
+            hasActiveField = true;
+            isActive = j["isActive"].get<bool>();
+        }
+        else if (j.contains("is_active") && !j["is_active"].is_null())
+        {
+            hasActiveField = true;
+            isActive = j["is_active"].get<bool>();
+        }
+        
+        if (hasActiveField)
+        {
+            if (isActive)
+            {
+                borrower.setActive();
+            }
+            else if ((j.contains("inactiveReason") && !j["inactiveReason"].is_null()) ||
+                     (j.contains("inactive_reason") && !j["inactive_reason"].is_null()))
+            {
+                std::string reason;
+                if (j.contains("inactiveReason") && !j["inactiveReason"].is_null()) {
+                    reason = j["inactiveReason"].get<std::string>();
+                } else {
+                    reason = j["inactive_reason"].get<std::string>();
+                }
+                borrower.setInactive(sdrs::constants::stringToInactiveReason(reason));
+            }
+        }
+        
+        return borrower;
     }
-    
-    return borrower;
+    catch (const nlohmann::json::exception& e) {
+        throw std::runtime_error(std::string("JSON parsing error: ") + e.what());
+    }
 }
 
 }

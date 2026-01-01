@@ -163,6 +163,30 @@ std::chrono::sys_seconds LoanAccount::getLoanEndDate() const
     return _loanEndDate;
 }
 
+std::string LoanAccount::getLoanStartDateString() const
+{
+    auto dp = std::chrono::floor<std::chrono::days>(_loanStartDate);
+    std::chrono::year_month_day ymd{dp};
+    std::ostringstream oss;
+    oss << std::format("{:04d}-{:02d}-{:02d}", 
+                       static_cast<int>(ymd.year()), 
+                       static_cast<unsigned>(ymd.month()), 
+                       static_cast<unsigned>(ymd.day()));
+    return oss.str();
+}
+
+std::string LoanAccount::getLoanEndDateString() const
+{
+    auto dp = std::chrono::floor<std::chrono::days>(_loanEndDate);
+    std::chrono::year_month_day ymd{dp};
+    std::ostringstream oss;
+    oss << std::format("{:04d}-{:02d}-{:02d}", 
+                       static_cast<int>(ymd.year()), 
+                       static_cast<unsigned>(ymd.month()), 
+                       static_cast<unsigned>(ymd.day()));
+    return oss.str();
+}
+
 std::chrono::sys_seconds LoanAccount::getCreatedAt() const
 {
     return _createdAt;
