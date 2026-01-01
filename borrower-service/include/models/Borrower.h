@@ -60,6 +60,7 @@ public:
     std::string getAddress() const;
     double getMonthlyIncome() const;
     std::chrono::year_month_day getDateOfBirth() const;
+    std::string getDateOfBirthString() const;  // Returns YYYY-MM-DD format
     sdrs::constants::EmploymentStatus getEmploymentStatus() const;
 
     // Business rule checks
