@@ -1,0 +1,353 @@
+{
+	"info": {
+		"name": "Smart Debt Recovery System API",
+		"description": "Collection for testing SDRS microservices APIs",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Borrower Service",
+			"item": [
+				{
+					"name": "Get All Borrowers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/borrowers",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["borrowers"]
+						},
+						"description": "Get list of all borrowers"
+					}
+				},
+				{
+					"name": "Get Borrower by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/borrowers/1",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["borrowers", "1"]
+						},
+						"description": "Get specific borrower by ID"
+					}
+				},
+				{
+					"name": "Create Borrower",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Nguyen\",\n  \"lastName\": \"Van A\",\n  \"email\": \"nguyenvana@example.com\",\n  \"phoneNumber\": \"0901234567\",\n  \"monthlyIncome\": 15000000\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8081/borrowers",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["borrowers"]
+						},
+						"description": "Create a new borrower"
+					}
+				},
+				{
+					"name": "Update Borrower",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Nguyen\",\n  \"lastName\": \"Van B\",\n  \"email\": \"nguyenvanb@example.com\",\n  \"phoneNumber\": \"0901234568\",\n  \"monthlyIncome\": 20000000\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8081/borrowers/1",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["borrowers", "1"]
+						},
+						"description": "Update existing borrower"
+					}
+				},
+				{
+					"name": "Delete Borrower",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/borrowers/1",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["borrowers", "1"]
+						},
+						"description": "Delete a borrower"
+					}
+				},
+				{
+					"name": "Get All Loans",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/loans",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["loans"]
+						},
+						"description": "Get all loan accounts"
+					}
+				},
+				{
+					"name": "Get Delinquent Loans",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/loans/delinquent?min_days=30",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["loans", "delinquent"],
+							"query": [
+								{
+									"key": "min_days",
+									"value": "30"
+								}
+							]
+						},
+						"description": "Get loans with days past due >= min_days"
+					}
+				},
+				{
+					"name": "Record Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 1000000,\n  \"paymentMethod\": \"BankTransfer\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8081/loans/1/payment",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["loans", "1", "payment"]
+						},
+						"description": "Record a payment for a loan"
+					}
+				},
+				{
+					"name": "Get All Payments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/payments",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["payments"]
+						},
+						"description": "Get all payment history"
+					}
+				}
+			]
+		},
+		{
+			"name": "Risk Assessment Service",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8082",
+							"path": ["health"]
+						},
+						"description": "Check if service is running"
+					}
+				},
+				{
+					"name": "Calculate Risk Score",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"borrowerId\": 1,\n  \"loanAmount\": 50000000,\n  \"monthlyIncome\": 15000000,\n  \"daysPastDue\": 30,\n  \"missedPayments\": 2\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8082/risk/calculate",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8082",
+							"path": ["risk", "calculate"]
+						},
+						"description": "Calculate risk score for a borrower"
+					}
+				}
+			]
+		},
+		{
+			"name": "Recovery Strategy Service",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8083",
+							"path": ["health"]
+						},
+						"description": "Check if service is running"
+					}
+				},
+				{
+					"name": "Get Strategy for Loan",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/strategy/loan/1",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8083",
+							"path": ["strategy", "loan", "1"]
+						},
+						"description": "Get recommended recovery strategy for a loan"
+					}
+				},
+				{
+					"name": "Execute Strategy",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"loanId\": 1,\n  \"strategyType\": \"AutomatedReminder\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8083/strategy/execute",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8083",
+							"path": ["strategy", "execute"]
+						},
+						"description": "Execute a recovery strategy"
+					}
+				}
+			]
+		},
+		{
+			"name": "Communication Service",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8084/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8084",
+							"path": ["health"]
+						},
+						"description": "Check if service is running"
+					}
+				},
+				{
+					"name": "Send Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"borrowerId\": 1,\n  \"channel\": \"Email\",\n  \"recipient\": \"nguyenvana@example.com\",\n  \"subject\": \"Payment Reminder\",\n  \"message\": \"Your payment is due soon\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8084/communication/send",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8084",
+							"path": ["communication", "send"]
+						},
+						"description": "Send email notification"
+					}
+				},
+				{
+					"name": "Send SMS",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"borrowerId\": 1,\n  \"channel\": \"SMS\",\n  \"recipient\": \"0901234567\",\n  \"message\": \"Payment reminder: Your payment is due\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8084/communication/send",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8084",
+							"path": ["communication", "send"]
+						},
+						"description": "Send SMS notification"
+					}
+				}
+			]
+		}
+	]
+}
