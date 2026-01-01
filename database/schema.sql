@@ -41,10 +41,6 @@ CREATE TABLE IF NOT EXISTS borrowers (
     -- Address Information
     date_of_birth DATE,
     address TEXT,
-    city VARCHAR(100),
-    state VARCHAR(100),
-    postal_code VARCHAR(20),
-    country VARCHAR(100) DEFAULT 'Vietnam',
 
     -- Financial & Employment Information
     monthly_income DECIMAL(15, 2) DEFAULT 0,
