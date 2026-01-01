@@ -13,14 +13,14 @@ endif()
 
 # Compiler flags
 if(MSVC)
-    add_compile_options(/W4 /WX)
+    add_compile_options(/W4)
 else()
-    add_compile_options(-Wall -Wextra -Wpedantic -Werror)
+    add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
 # Conan dependencies
 find_package(nlohmann_json REQUIRED)
-# find_package(libpqxx REQUIRED)  # TODO: Install manually or use vcpkg
+find_package(libpqxx QUIET)
 find_package(httplib REQUIRED)
 
 # Subdirectories

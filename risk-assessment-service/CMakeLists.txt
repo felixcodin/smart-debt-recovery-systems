@@ -11,6 +11,9 @@ set(RISK_ASSESSMENT_SERVICE_SOURCES
     
     # Models
     src/models/RiskScorer.cpp
+    
+    # Repositories
+    src/repositories/RiskAssessmentRepository.cpp
 )
 
 # Header files (for IDE support)
@@ -21,6 +24,9 @@ set(RISK_ASSESSMENT_SERVICE_HEADERS
     
     # Models
     include/models/RiskScorer.h
+    
+    # Repositories
+    include/repositories/RiskAssessmentRepository.h
 )
 
 # Create executable
