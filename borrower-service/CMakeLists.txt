@@ -48,8 +48,9 @@ target_include_directories(borrower_service PRIVATE
 target_link_libraries(borrower_service PRIVATE
     sdrs_common
     nlohmann_json::nlohmann_json
-    $<$<TARGET_EXISTS:libpqxx::pqxx>:libpqxx::pqxx>
     httplib::httplib
+    pqxx
+    pq
 )
 
 # Set properties

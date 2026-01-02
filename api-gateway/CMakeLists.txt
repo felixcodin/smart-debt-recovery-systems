@@ -3,11 +3,14 @@
 # Source files
 set(API_GATEWAY_SOURCES
     src/main.cpp
+    src/middleware/Middleware.cpp
+    src/registry/ServiceRegistry.cpp
 )
 
 # Header files (for IDE support)
 set(API_GATEWAY_HEADERS
-    # Add headers as they are created
+    include/middleware/Middleware.h
+    include/registry/ServiceRegistry.h
 )
 
 # Create executable
@@ -20,9 +23,10 @@ target_include_directories(api_gateway PRIVATE
 
 # Link libraries
 target_link_libraries(api_gateway PRIVATE
-    sdrs_common
-    nlohmann_json::nlohmann_json
-    httplib::httplib
+    PRIVATE
+        sdrs_common
+        nlohmann_json::nlohmann_json
+        httplib::httplib
 )
 
 # Set properties

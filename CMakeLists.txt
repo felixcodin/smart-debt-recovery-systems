@@ -21,7 +21,18 @@ endif()
 # Conan dependencies
 find_package(nlohmann_json REQUIRED)
 find_package(libpqxx QUIET)
-find_package(httplib REQUIRED)
+
+# Try to find httplib, if not found use FetchContent
+find_package(httplib QUIET)
+if(NOT httplib_FOUND)
+    message(STATUS "httplib not found, using FetchContent to download")
+    include(FetchContent)
+    FetchContent_Declare(
+        httplib
+        URL https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.15.3.tar.gz
+    )
+    FetchContent_MakeAvailable(httplib)
+endif()
 
 # Subdirectories
 add_subdirectory(common)
