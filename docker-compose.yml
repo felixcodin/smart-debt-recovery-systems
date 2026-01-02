@@ -1,0 +1,165 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: sdrs-postgres
+    environment:
+      POSTGRES_DB: sdrs_db
+      POSTGRES_USER: sdrs_user
+      POSTGRES_PASSWORD: sdrs_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/02-init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - sdrs-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sdrs_user -d sdrs_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sdrs-api-gateway
+    command: /usr/local/bin/api-gateway
+    environment:
+      BORROWER_SERVICE_HOST: borrower-service
+      RISK_SERVICE_HOST: risk-assessment-service
+      RECOVERY_SERVICE_HOST: recovery-strategy-service
+      COMMUNICATION_SERVICE_HOST: communication-service
+    ports:
+      - "8080:8080"
+    networks:
+      - sdrs-network
+    depends_on:
+      - borrower-service
+      - risk-assessment-service
+      - recovery-strategy-service
+      - communication-service
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Borrower Service
+  borrower-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sdrs-borrower-service
+    command: /usr/local/bin/borrower-service
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: sdrs_db
+      DB_USER: sdrs_user
+      DB_PASSWORD: sdrs_pass
+    ports:
+      - "8081:8081"
+    networks:
+      - sdrs-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Risk Assessment Service
+  risk-assessment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sdrs-risk-assessment
+    command: /usr/local/bin/risk-assessment-service
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: sdrs_db
+      DB_USER: sdrs_user
+      DB_PASSWORD: sdrs_pass
+    ports:
+      - "8082:8082"
+    networks:
+      - sdrs-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Recovery Strategy Service
+  recovery-strategy-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sdrs-recovery-strategy
+    command: /usr/local/bin/recovery-strategy-service
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: sdrs_db
+      DB_USER: sdrs_user
+      DB_PASSWORD: sdrs_pass
+    ports:
+      - "8083:8083"
+    networks:
+      - sdrs-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Communication Service
+  communication-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sdrs-communication
+    command: /usr/local/bin/communication-service
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: sdrs_db
+      DB_USER: sdrs_user
+      DB_PASSWORD: sdrs_pass
+    ports:
+      - "8084:8084"
+    networks:
+      - sdrs-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  sdrs-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

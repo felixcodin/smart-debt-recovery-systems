@@ -1,0 +1,46 @@
+# Build artifacts
+build/
+*.o
+*.a
+*.so
+*.exe
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+
+# Test files
+tests/
+*_test.cpp
+test_*.cpp
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+
+# Node modules (if any)
+node_modules/
+
+# Python cache (if any)
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini

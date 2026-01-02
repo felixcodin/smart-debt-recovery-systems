@@ -43,13 +43,14 @@ target_include_directories(sdrs_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# Find libpqxx
-find_package(libpqxx QUIET)
+# Find libpqxx - check /usr/local first (for custom builds)
+set(CMAKE_PREFIX_PATH "/usr/local" ${CMAKE_PREFIX_PATH})
+find_package(libpqxx REQUIRED CONFIG)
 
 # Link dependencies
 target_link_libraries(sdrs_common PUBLIC
     nlohmann_json::nlohmann_json
-    $<$<TARGET_EXISTS:libpqxx::pqxx>:libpqxx::pqxx>
+    libpqxx::pqxx
 )
 
 # Set properties
