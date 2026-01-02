@@ -5,6 +5,7 @@
 #include "../../../common/include/exceptions/ValidationException.h"
 #include "../../../common/include/utils/Constants.h"
 #include <sstream>
+#include <iomanip>
 #include <chrono>
 #include <string>
 #include <format>
@@ -201,20 +202,32 @@ PaymentHistory PaymentHistory::fromJson(const std::string& json)
     if (j.contains("payment_date") && !j["payment_date"].is_null())
     {
         std::string dateStr = j["payment_date"].get<std::string>();
+        std::tm tm = {};
         std::istringstream iss(dateStr);
-        std::chrono::sys_days parsed;
-        std::chrono::from_stream(iss, "%Y-%m-%d", parsed);
-        paymentDate = parsed;
+        iss >> std::get_time(&tm, "%Y-%m-%d");
+        if (!iss.fail())
+        {
+            auto time = std::mktime(&tm);
+            paymentDate = std::chrono::floor<std::chrono::days>(
+                std::chrono::system_clock::from_time_t(time)
+            );
+        }
     }
     
     std::optional<std::chrono::sys_days> dueDate;
     if (j.contains("due_date") && !j["due_date"].is_null())
     {
         std::string dateStr = j["due_date"].get<std::string>();
+        std::tm tm = {};
         std::istringstream iss(dateStr);
-        std::chrono::sys_days parsed;
-        std::chrono::from_stream(iss, "%Y-%m-%d", parsed);
-        dueDate = parsed;
+        iss >> std::get_time(&tm, "%Y-%m-%d");
+        if (!iss.fail())
+        {
+            auto time = std::mktime(&tm);
+            dueDate = std::chrono::floor<std::chrono::days>(
+                std::chrono::system_clock::from_time_t(time)
+            );
+        }
     }
     
     PaymentHistory payment(paymentId, accountId, sdrs::money::Money(amount), method, paymentDate, dueDate);

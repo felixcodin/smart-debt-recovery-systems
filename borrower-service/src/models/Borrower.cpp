@@ -6,6 +6,7 @@
 #include <regex>
 #include <cmath>
 #include <sstream>
+#include <iomanip>
 #include <nlohmann/json.hpp>
 
 using namespace sdrs::constants;
@@ -266,17 +267,19 @@ std::string Borrower::getDateOfBirthString() const
 
 void Borrower::setDateOfBirth(const std::string& dobString)
 {
+    std::tm tm = {};
     std::istringstream iss(dobString);
-    std::chrono::sys_days tmp;
-
-    std::chrono::from_stream(iss, "%Y-%m-%d", tmp);
+    iss >> std::get_time(&tm, "%Y-%m-%d");
 
     if (iss.fail())
     {
         throw ValidationException("Invalid date format. Expected YYYY-MM-DD", "dateOfBirth");
     }
 
-    _dateOfBirth = tmp;
+    auto time = std::mktime(&tm);
+    _dateOfBirth = std::chrono::floor<std::chrono::days>(
+        std::chrono::system_clock::from_time_t(time)
+    );
     _updatedAt = std::chrono::floor<std::chrono::seconds>(
         std::chrono::system_clock::now()
     );
