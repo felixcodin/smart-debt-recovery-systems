@@ -455,12 +455,10 @@ CREATE TABLE IF NOT EXISTS ml_models (
     
     trained_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT false,
-    
-    CONSTRAINT unique_active_model UNIQUE (model_type, is_active) 
-        WHERE is_active = true
+    is_active BOOLEAN DEFAULT false
 );
 
+CREATE UNIQUE INDEX unique_active_model ON ml_models(model_type) WHERE is_active = true;
 CREATE INDEX idx_ml_models_type ON ml_models(model_type);
 CREATE INDEX idx_ml_models_active ON ml_models(is_active) WHERE is_active = true;
 CREATE INDEX idx_ml_models_trained ON ml_models(trained_at DESC);
