@@ -103,6 +103,14 @@ int main() {
     
     httplib::Server server;
     
+    // Add universal OPTIONS handler for CORS preflight
+    server.Options(".*", [](const httplib::Request& req, httplib::Response& res) {
+        g_middlewareChain.execute(req, res, [](const httplib::Request&, httplib::Response& res) {
+            // CORS headers already added by CORSMiddleware
+            res.status = 204;
+        });
+    });
+    
     // Health check endpoint
     server.Get("/health", [](const httplib::Request& req, httplib::Response& res) {
         g_middlewareChain.execute(req, res, [](const httplib::Request&, httplib::Response& res) {
@@ -182,10 +190,33 @@ int main() {
         });
     });
     
+    // Update borrower risk segment - workaround route
+    server.Post(R"(/api/update-segment/(\d+))", [](const httplib::Request& req, httplib::Response& res) {
+        g_middlewareChain.execute(req, res, [&req](const httplib::Request&, httplib::Response& res) {
+            std::string path = "/update-segment/" + std::string(req.matches[1]);
+            forwardRequest(req, res, "borrower-service", path);
+        });
+    });
+    
     // Route /api/loans/* to borrower-service
+    server.Get(R"(/api/loans(.*))", [](const httplib::Request& req, httplib::Response& res) {
+        g_middlewareChain.execute(req, res, [&req](const httplib::Request&, httplib::Response& res) {
+            std::string path = "/loans" + std::string(req.matches[1]);
+            forwardRequest(req, res, "borrower-service", path);
+        });
+    });
+    
     server.Post(R"(/api/loans(.*))", [](const httplib::Request& req, httplib::Response& res) {
         g_middlewareChain.execute(req, res, [&req](const httplib::Request&, httplib::Response& res) {
             std::string path = "/loans" + std::string(req.matches[1]);
+            forwardRequest(req, res, "borrower-service", path);
+        });
+    });
+    
+    // Route /api/payments/* to borrower-service
+    server.Get(R"(/api/payments(.*))", [](const httplib::Request& req, httplib::Response& res) {
+        g_middlewareChain.execute(req, res, [&req](const httplib::Request&, httplib::Response& res) {
+            std::string path = "/payments" + std::string(req.matches[1]);
             forwardRequest(req, res, "borrower-service", path);
         });
     });
@@ -197,7 +228,25 @@ int main() {
         });
     });
     
+    server.Post("/api/risk/cluster", [](const httplib::Request& req, httplib::Response& res) {
+        g_middlewareChain.execute(req, res, [&req](const httplib::Request&, httplib::Response& res) {
+            forwardRequest(req, res, "risk-assessment-service", "/cluster/borrowers");
+        });
+    });
+    
+    server.Get("/api/risk/model/status", [](const httplib::Request& req, httplib::Response& res) {
+        g_middlewareChain.execute(req, res, [&req](const httplib::Request&, httplib::Response& res) {
+            forwardRequest(req, res, "risk-assessment-service", "/model/status");
+        });
+    });
+    
     // Route /api/strategy/* to recovery-strategy-service
+    server.Get("/api/strategy/list", [](const httplib::Request& req, httplib::Response& res) {
+        g_middlewareChain.execute(req, res, [&req](const httplib::Request&, httplib::Response& res) {
+            forwardRequest(req, res, "recovery-strategy-service", "/list");
+        });
+    });
+    
     server.Post("/api/strategy/execute", [](const httplib::Request& req, httplib::Response& res) {
         g_middlewareChain.execute(req, res, [&req](const httplib::Request&, httplib::Response& res) {
             forwardRequest(req, res, "recovery-strategy-service", "/execute-strategy");
@@ -205,6 +254,12 @@ int main() {
     });
     
     // Route /api/communication/* to communication-service
+    server.Get(R"(/api/communication/history/(\d+))", [](const httplib::Request& req, httplib::Response& res) {
+        g_middlewareChain.execute(req, res, [&req](const httplib::Request&, httplib::Response& res) {
+            std::string borrowerId = req.matches[1];
+            forwardRequest(req, res, "communication-service", "/history/" + borrowerId);
+        });
+    });
     server.Post("/api/communication/email", [](const httplib::Request& req, httplib::Response& res) {
         g_middlewareChain.execute(req, res, [&req](const httplib::Request&, httplib::Response& res) {
             forwardRequest(req, res, "communication-service", "/send-email");
