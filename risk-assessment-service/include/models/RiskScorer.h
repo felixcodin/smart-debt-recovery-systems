@@ -80,6 +80,7 @@ struct RiskFeatures
     sdrs::constants::AccountStatus accountStatus;
 
     // Borrower data
+    int age = 0;  // Age of borrower (key feature for risk assessment)
     sdrs::money::Money monthlyIncome;
     sdrs::constants::EmploymentStatus employmentStatus;  // Enum: Employed, Unemployed, SelfEmployed, etc.
 
@@ -104,7 +105,7 @@ private:
     static constexpr double MAX_DAYS_PAST_DUE = 365.0;
     static constexpr double MAX_MISSED_PAYMENTS = 12.0;
     static constexpr double MAX_INTEREST_RATE = 0.30;
-    static constexpr double MAX_MONTHLY_INCOME = 50000.0; // USD
+    static constexpr double MAX_MONTHLY_INCOME = 50000000.0; // VND (50M VND)
     static constexpr double MAX_LOAN_TERM = 120.0; // Months
     static constexpr double MAX_REMAINING_BALANCE_RATIO = 1.0;
     static constexpr double MAX_EMPLOYMENT_RISK_SCORE = 1.0;
