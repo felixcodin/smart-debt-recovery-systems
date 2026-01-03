@@ -29,7 +29,7 @@ struct DatabaseConfig
     std::string getConnectionString() const
     {
         return std::format(
-            "host={} port={} dbname={} user={} password={} connect_time_out={}",
+            "host={} port={} dbname={} user={} password={} connect_timeout={}",
             host,
             port,
             database,
@@ -121,7 +121,12 @@ public:
             }
             catch (const std::exception& e)
             {
-                // Log error but continue - pool will create connections on demand
+                // If first connection fails, throw error
+                if (i == 0) {
+                    throw std::runtime_error("Failed to create initial database connection: " + std::string(e.what()) + 
+                        "\nConnection string: host=" + _config.host + " port=" + std::to_string(_config.port) + 
+                        " dbname=" + _config.database + " user=" + _config.user);
+                }
                 break;
             }
         }
