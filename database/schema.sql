@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS borrowers (
     -- Financial & Employment Information
     monthly_income DECIMAL(15, 2) DEFAULT 0,
     employment_status employment_status_enum DEFAULT 'None',
+    risk_segment VARCHAR(20) DEFAULT 'Unclassified',
 
     -- Status & Lifecycle
     is_active BOOLEAN DEFAULT true NOT NULL,
