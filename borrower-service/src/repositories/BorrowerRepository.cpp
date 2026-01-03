@@ -57,6 +57,7 @@ Borrower BorrowerRepository::create(const Borrower& borrower)
             Borrower created(newId, borrower.getFirstName(), borrower.getLastName());
             created.setEmail(borrower.getEmail());
             created.setPhoneNumber(borrower.getPhoneNumber());
+            created.setDateOfBirth(borrower.getDateOfBirthString()); // FIX: Set date of birth
             created.setAddress(borrower.getAddress());
             created.setMonthlyIncome(borrower.getMonthlyIncome());
             created.setEmploymentStatus(borrower.getEmploymentStatus());
@@ -85,7 +86,7 @@ std::optional<Borrower> BorrowerRepository::findById(int id)
             std::string sql = R"(
                 SELECT borrower_id, first_name, last_name, email, phone_number,
                        date_of_birth, address,
-                       monthly_income, employment_status, is_active, inactive_reason,
+                       monthly_income, employment_status, risk_segment, is_active, inactive_reason,
                        created_at, updated_at
                 FROM borrowers
                 WHERE borrower_id = $1
@@ -117,6 +118,20 @@ Borrower BorrowerRepository::update(const Borrower& borrower)
         auto& db = sdrs::database::DatabaseManager::getInstance();
         
         return db.executeQuery([&](pqxx::work& txn) -> Borrower {
+            // Convert risk segment enum to string
+            std::string riskSegmentStr;
+            switch (borrower.getRiskSegment()) {
+                case sdrs::borrower::RiskSegment::Low: riskSegmentStr = "Low"; break;
+                case sdrs::borrower::RiskSegment::Medium: riskSegmentStr = "Medium"; break;
+                case sdrs::borrower::RiskSegment::High: riskSegmentStr = "High"; break;
+                case sdrs::borrower::RiskSegment::Unclassified: riskSegmentStr = "Unclassified"; break;
+                default: riskSegmentStr = "Unknown"; break;
+            }
+            
+            // DEBUG: Log what we're about to update
+            sdrs::utils::Logger::Info("[DB] BEFORE UPDATE: borrower_id=" + std::to_string(borrower.getId()) + 
+                                      ", risk_segment='" + riskSegmentStr + "'");
+            
             std::string sql = R"(
                 UPDATE borrowers SET
                     first_name = $2,
@@ -126,7 +141,8 @@ Borrower BorrowerRepository::update(const Borrower& borrower)
                     address = $6,
                     monthly_income = $7,
                     employment_status = $8::employment_status_enum,
-                    is_active = $9
+                    is_active = $9,
+                    risk_segment = $10
                 WHERE borrower_id = $1
                 RETURNING borrower_id
             )";
@@ -140,7 +156,8 @@ Borrower BorrowerRepository::update(const Borrower& borrower)
                 borrower.getAddress(),
                 borrower.getMonthlyIncome(),
                 sdrs::constants::employmentStatusToString(borrower.getEmploymentStatus()),
-                borrower.isActive()
+                borrower.isActive(),
+                riskSegmentStr
             );
             
             if (result.empty())
@@ -199,7 +216,7 @@ std::vector<Borrower> BorrowerRepository::findAll()
             std::string sql = R"(
                 SELECT borrower_id, first_name, last_name, email, phone_number,
                        date_of_birth, address,
-                       monthly_income, employment_status, is_active, inactive_reason,
+                       monthly_income, employment_status, risk_segment, is_active, inactive_reason,
                        created_at, updated_at
                 FROM borrowers
                 ORDER BY created_at DESC
@@ -243,7 +260,7 @@ std::optional<Borrower> BorrowerRepository::findByEmail(const std::string& email
             std::string sql = R"(
                 SELECT borrower_id, first_name, last_name, email, phone_number,
                        date_of_birth, address,
-                       monthly_income, employment_status, is_active, inactive_reason,
+                       monthly_income, employment_status, risk_segment, is_active, inactive_reason,
                        created_at, updated_at
                 FROM borrowers
                 WHERE email = $1
@@ -278,7 +295,7 @@ std::vector<Borrower> BorrowerRepository::findByActiveStatus(bool isActive)
             std::string sql = R"(
                 SELECT borrower_id, first_name, last_name, email, phone_number,
                        date_of_birth, address,
-                       monthly_income, employment_status, is_active, inactive_reason,
+                       monthly_income, employment_status, risk_segment, is_active, inactive_reason,
                        created_at, updated_at
                 FROM borrowers
                 WHERE is_active = $1
@@ -346,6 +363,9 @@ Borrower BorrowerRepository::mapRowToBorrower(const pqxx::row& row)
     if (!row["address"].is_null())
         borrower.setAddress(row["address"].as<std::string>());
     
+    if (!row["date_of_birth"].is_null())
+        borrower.setDateOfBirth(row["date_of_birth"].as<std::string>());
+    
     if (!row["monthly_income"].is_null())
         borrower.setMonthlyIncome(row["monthly_income"].as<double>());
     
@@ -353,6 +373,20 @@ Borrower BorrowerRepository::mapRowToBorrower(const pqxx::row& row)
     {
         std::string status = row["employment_status"].as<std::string>();
         borrower.setEmploymentStatus(sdrs::constants::stringToEmploymentStatus(status));
+    }
+    
+    // Parse risk_segment from database
+    if (!row["risk_segment"].is_null())
+    {
+        std::string segmentStr = row["risk_segment"].as<std::string>();
+        if (segmentStr == "Low") 
+            borrower.assignSegment(sdrs::borrower::RiskSegment::Low);
+        else if (segmentStr == "Medium") 
+            borrower.assignSegment(sdrs::borrower::RiskSegment::Medium);
+        else if (segmentStr == "High") 
+            borrower.assignSegment(sdrs::borrower::RiskSegment::High);
+        else 
+            borrower.assignSegment(sdrs::borrower::RiskSegment::Unclassified);
     }
     
     if (row["is_active"].as<bool>())
