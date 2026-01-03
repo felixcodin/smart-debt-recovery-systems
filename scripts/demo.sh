@@ -83,7 +83,7 @@ echo -e "${CYAN}=========================================${NC}"
 test_endpoint "Create New Borrower" "POST" "$API_GATEWAY/api/borrowers" '{
     "name": "Nguyen Van Demo",
     "email": "demo@example.com",
-    "phone": "+84901234567",
+    "phone_number": "0901234567",
     "address": "123 Demo Street, Hanoi"
 }'
 
@@ -98,10 +98,15 @@ echo -e "${CYAN}  PHASE 3: RISK ASSESSMENT (Mock)${NC}"
 echo -e "${CYAN}=========================================${NC}"
 
 test_endpoint "Assess Credit Risk" "POST" "$API_GATEWAY/api/risk/assess" '{
+    "account_id": 1,
     "borrower_id": 1,
-    "loan_amount": 50000000,
-    "income": 20000000,
-    "credit_history_years": 5
+    "days_past_due": 15,
+    "missed_payments": 2,
+    "loan_amount": 50000000.0,
+    "remaining_amount": 45000000.0,
+    "interest_rate": 0.125,
+    "monthly_income": 20000000.0,
+    "account_age_months": 12
 }'
 
 echo -e "${GRAY}  Note: Other risk endpoints not yet implemented in mock mode${NC}"
@@ -115,7 +120,7 @@ echo -e "${CYAN}=========================================${NC}"
 
 test_endpoint "Execute Recovery Strategy" "POST" "$API_GATEWAY/api/strategy/execute" '{
     "borrower_id": 1,
-    "loan_account_id": 1,
+    "account_id": 1,
     "strategy_type": "automated_reminder",
     "overdue_days": 15,
     "outstanding_amount": 5000000

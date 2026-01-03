@@ -15,6 +15,19 @@ using namespace sdrs::exceptions;
 namespace sdrs::borrower
 {
 
+// Helper function to convert RiskSegment enum to string
+static std::string riskSegmentToString(RiskSegment segment)
+{
+    switch (segment)
+    {
+        case RiskSegment::Low: return "Low";
+        case RiskSegment::Medium: return "Medium";
+        case RiskSegment::High: return "High";
+        case RiskSegment::Unclassified: return "Unclassified";
+        default: return "Unknown";
+    }
+}
+
 Borrower::Borrower(int id,
     const std::string& fname,
     const std::string& lname)
@@ -122,6 +135,19 @@ std::chrono::sys_seconds Borrower::getInactiveAt() const
 EmploymentStatus Borrower::getEmploymentStatus() const
 {
     return _employmentStatus;
+}
+
+RiskSegment Borrower::getRiskSegment() const
+{
+    return _riskSegment;
+}
+
+void Borrower::assignSegment(RiskSegment segment)
+{
+    _riskSegment = segment;
+    _updatedAt = std::chrono::floor<std::chrono::seconds>(
+        std::chrono::system_clock::now()
+    );
 }
 
 bool Borrower::isActive() const
@@ -265,6 +291,23 @@ std::string Borrower::getDateOfBirthString() const
     return oss.str();
 }
 
+int Borrower::getAge() const
+{
+    auto today = std::chrono::floor<std::chrono::days>(std::chrono::system_clock::now());
+    std::chrono::year_month_day ymd_birth{_dateOfBirth};
+    std::chrono::year_month_day ymd_today{today};
+    
+    int age = static_cast<int>(ymd_today.year()) - static_cast<int>(ymd_birth.year());
+    
+    // Adjust if birthday hasn't occurred this year yet
+    if (ymd_today.month() < ymd_birth.month() || 
+        (ymd_today.month() == ymd_birth.month() && ymd_today.day() < ymd_birth.day())) {
+        age--;
+    }
+    
+    return age;
+}
+
 void Borrower::setDateOfBirth(const std::string& dobString)
 {
     std::tm tm = {};
@@ -295,8 +338,10 @@ std::string Borrower::toJson() const
     j["phone_number"] = _phoneNumber;
     j["address"] = _address;
     j["date_of_birth"] = std::format("{:%Y-%m-%d}", _dateOfBirth);
+    j["age"] = getAge();
     j["employment_status"] = sdrs::constants::employmentStatusToString(_employmentStatus);
     j["monthly_income"] = _monthlyIncome;
+    j["risk_segment"] = riskSegmentToString(_riskSegment);
     j["is_active"] = _isActive;
     j["inactive_reason"] = sdrs::constants::inactiveReasonToString(_inactiveReason);
     j["created_at"] = std::format("{:%Y-%m-%d %H:%M:%S}", _createdAt);
@@ -317,9 +362,23 @@ Borrower Borrower::fromJson(const std::string& json)
         // Required fields - support both camelCase and snake_case
         int id = j.value("borrower_id", j.value("id", 0));
         
-        // Support both firstName and first_name
         std::string firstName;
-        if (j.contains("firstName")) {
+        std::string lastName;
+        
+        // Support "name" field that contains full name (split into first/last)
+        if (j.contains("name") && !j["name"].is_null()) {
+            std::string fullName = j["name"].get<std::string>();
+            auto spacePos = fullName.find(' ');
+            if (spacePos != std::string::npos) {
+                firstName = fullName.substr(0, spacePos);
+                lastName = fullName.substr(spacePos + 1);
+            } else {
+                firstName = fullName;
+                lastName = "";
+            }
+        }
+        // Support both firstName and first_name
+        else if (j.contains("firstName")) {
             if (j["firstName"].is_null()) {
                 throw std::runtime_error("Field 'firstName' cannot be null");
             }
@@ -330,23 +389,24 @@ Borrower Borrower::fromJson(const std::string& json)
             }
             firstName = j["first_name"].get<std::string>();
         } else {
-            throw std::runtime_error("Missing required field: firstName or first_name");
+            throw std::runtime_error("Missing required field: name, firstName, or first_name");
         }
         
-        // Support both lastName and last_name
-        std::string lastName;
-        if (j.contains("lastName")) {
-            if (j["lastName"].is_null()) {
-                throw std::runtime_error("Field 'lastName' cannot be null");
+        // Support both lastName and last_name (only if name wasn't used)
+        if (!j.contains("name")) {
+            if (j.contains("lastName")) {
+                if (j["lastName"].is_null()) {
+                    throw std::runtime_error("Field 'lastName' cannot be null");
+                }
+                lastName = j["lastName"].get<std::string>();
+            } else if (j.contains("last_name")) {
+                if (j["last_name"].is_null()) {
+                    throw std::runtime_error("Field 'last_name' cannot be null");
+                }
+                lastName = j["last_name"].get<std::string>();
+            } else {
+                throw std::runtime_error("Missing required field: lastName or last_name");
             }
-            lastName = j["lastName"].get<std::string>();
-        } else if (j.contains("last_name")) {
-            if (j["last_name"].is_null()) {
-                throw std::runtime_error("Field 'last_name' cannot be null");
-            }
-            lastName = j["last_name"].get<std::string>();
-        } else {
-            throw std::runtime_error("Missing required field: lastName or last_name");
         }
         
         Borrower borrower(id, firstName, lastName);
@@ -437,6 +497,20 @@ Borrower Borrower::fromJson(const std::string& json)
                 }
                 borrower.setInactive(sdrs::constants::stringToInactiveReason(reason));
             }
+        }
+        
+        // Parse risk_segment if present
+        if (j.contains("risk_segment") && !j["risk_segment"].is_null())
+        {
+            std::string segmentStr = j["risk_segment"].get<std::string>();
+            if (segmentStr == "Low") {
+                borrower.assignSegment(sdrs::borrower::RiskSegment::Low);
+            } else if (segmentStr == "Medium") {
+                borrower.assignSegment(sdrs::borrower::RiskSegment::Medium);
+            } else if (segmentStr == "High") {
+                borrower.assignSegment(sdrs::borrower::RiskSegment::High);
+            }
+            // Else keep default Unclassified
         }
         
         return borrower;

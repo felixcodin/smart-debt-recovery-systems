@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDRS Dashboard - Smart Debt Recovery System</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="css/styles.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">
+                <i class="bi bi-bank2"></i> SDRS
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="index.html">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="borrowers.html">
+                            <i class="bi bi-people"></i> Borrowers
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="recovery.html">
+                            <i class="bi bi-graph-up-arrow"></i> Recovery Actions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="demo.html">
+                            <i class="bi bi-play-circle"></i> Demo
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="mb-4">
+                    <i class="bi bi-speedometer2"></i> System Dashboard
+                </h1>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card fade-in">
+                    <i class="bi bi-people text-primary" style="font-size: 3rem;"></i>
+                    <h3 id="totalBorrowers">-</h3>
+                    <p>Total Borrowers</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card fade-in">
+                    <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                    <h3 id="activeAccounts">-</h3>
+                    <p>Active Accounts</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card fade-in">
+                    <i class="bi bi-graph-up text-success" style="font-size: 3rem;"></i>
+                    <h3 id="recoveryRate">-</h3>
+                    <p>Recovery Rate</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card fade-in">
+                    <i class="bi bi-clock-history text-info" style="font-size: 3rem;"></i>
+                    <h3 id="pendingActions">-</h3>
+                    <p>Pending Actions</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Health -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card fade-in">
+                    <div class="card-header">
+                        <i class="bi bi-heart-pulse"></i> System Health
+                    </div>
+                    <div class="card-body">
+                        <div id="systemHealth">
+                            <div class="spinner-container">
+                                <div class="spinner-border text-primary" role="status"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Microservices Status -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card fade-in">
+                    <div class="card-header">
+                        <i class="bi bi-boxes"></i> Microservices Status
+                    </div>
+                    <div class="card-body">
+                        <div id="servicesStatus"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card fade-in">
+                    <div class="card-header">
+                        <i class="bi bi-activity"></i> Recent Activity
+                    </div>
+                    <div class="card-body">
+                        <div id="recentActivity">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> 
+                                Recent activity will be displayed here
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- API Client -->
+    <script src="js/api.js"></script>
+    
+    <!-- Dashboard Script -->
+    <script>
+        // Load dashboard data
+        async function loadDashboard() {
+            showLoading('systemHealth');
+            showLoading('servicesStatus');
+            
+            try {
+                // Load system health
+                const health = await api.getHealth();
+                hideLoading('systemHealth');
+                hideLoading('servicesStatus');
+                
+                displaySystemHealth(health);
+                displayServicesStatus(health);
+                
+                // Load borrower statistics
+                try {
+                    const borrowers = await api.getBorrowers();
+                    document.getElementById('totalBorrowers').textContent = borrowers.data.length;
+                    document.getElementById('activeAccounts').textContent = borrowers.data.length;
+                    document.getElementById('recoveryRate').textContent = '85%';
+                    document.getElementById('pendingActions').textContent = '3';
+                } catch (borrowerError) {
+                    console.error('Failed to load borrowers:', borrowerError);
+                    document.getElementById('totalBorrowers').textContent = '-';
+                    document.getElementById('activeAccounts').textContent = '-';
+                }
+                
+            } catch (error) {
+                hideLoading('systemHealth');
+                hideLoading('servicesStatus');
+                console.error('Failed to load dashboard:', error);
+                
+                // Display error in system health area
+                document.getElementById('systemHealth').innerHTML = `
+                    <div class="alert alert-danger mb-0">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Cannot connect to API Gateway</h6>
+                        <small>Please ensure backend services are running at http://localhost:8080</small>
+                        <br><small>Error: ${error.message}</small>
+                    </div>
+                `;
+                
+                // Display error in services status area
+                document.getElementById('servicesStatus').innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-wifi-off" style="font-size: 2rem;"></i>
+                        <p class="mt-2">Unable to fetch service status</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displaySystemHealth(health) {
+            const container = document.getElementById('systemHealth');
+            const isHealthy = health.status === 'healthy';
+            
+            container.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h4 class="mb-0">
+                            <span class="${isHealthy ? 'status-healthy' : 'status-unhealthy'}">
+                                <i class="bi bi-${isHealthy ? 'check-circle' : 'x-circle'}"></i>
+                                ${isHealthy ? 'All Systems Operational' : 'System Issues Detected'}
+                            </span>
+                        </h4>
+                        <p class="text-muted mb-0 mt-2">
+                            Last checked: ${new Date().toLocaleString()}
+                        </p>
+                    </div>
+                    <button class="btn btn-primary" onclick="loadDashboard()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+            `;
+        }
+
+        function displayServicesStatus(health) {
+            const container = document.getElementById('servicesStatus');
+            const services = health.services || {};
+            
+            let html = '';
+            const serviceNames = {
+                'borrower-service': 'Borrower Service',
+                'risk-assessment-service': 'Risk Assessment',
+                'recovery-strategy-service': 'Recovery Strategy',
+                'communication-service': 'Communication'
+            };
+            
+            for (const [key, service] of Object.entries(services)) {
+                const isHealthy = service.healthy;
+                html += `
+                    <div class="service-status">
+                        <div class="service-icon ${isHealthy ? 'healthy' : 'unhealthy'}">
+                            <i class="bi bi-${isHealthy ? 'check-circle-fill' : 'x-circle-fill'}"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${serviceNames[key] || key}</h6>
+                            <small class="text-muted">
+                                ${service.host}:${service.port} | Failures: ${service.failures}
+                            </small>
+                        </div>
+                        <span class="${isHealthy ? 'status-healthy' : 'status-unhealthy'}">
+                            ${isHealthy ? 'Healthy' : 'Unhealthy'}
+                        </span>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Load dashboard on page load
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+    </script>
+</body>
+</html>

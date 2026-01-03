@@ -17,7 +17,8 @@ namespace sdrs::borrower
 {
 void LoanAccount::validateConstructorArgs(int accountId,int borrowerId,double loanAmount,double interestRate,int loanTermMonths) const
 {
-    if (accountId <= 0)
+    // accountId can be 0 for new accounts (will be assigned by database)
+    if (accountId < 0)
     {
         throw ValidationException("Invalid account id", "accountId");
     }
@@ -425,7 +426,11 @@ LoanAccount LoanAccount::fromJson(const std::string& json)
     
     // Calculate loan term from start/end dates if provided, otherwise default to 12 months
     int loanTermMonths = 12;
-    if (j.contains("loan_start_date") && j.contains("loan_end_date"))
+    if (j.contains("loan_term_months") && !j["loan_term_months"].is_null())
+    {
+        loanTermMonths = j["loan_term_months"].get<int>();
+    }
+    else if (j.contains("loan_start_date") && j.contains("loan_end_date"))
     {
         // For MVP, simplified calculation
         loanTermMonths = 12; // Can be enhanced later

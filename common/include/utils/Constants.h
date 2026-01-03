@@ -188,8 +188,8 @@ namespace risk
 
     // Random Forest hyperparameters
     inline constexpr int RF_NUM_TREES = 10;
-    inline constexpr int RF_MAX_DEPTH = 7;
-    inline constexpr int RF_MIN_SAMPLES_SPLIT = 5;
+    inline constexpr int RF_MAX_DEPTH = 5;  // Reduced from 7 to prevent overfitting
+    inline constexpr int RF_MIN_SAMPLES_SPLIT = 10;  // Increased from 5
     inline constexpr int RF_LEAF_FEATURES_INDEX = -1;
     inline constexpr double RF_VARIANCE_EPSILON = 1e-7;
 

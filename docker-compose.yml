@@ -10,7 +10,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/02-init.sql
     ports:
       - "5432:5432"
     networks:
@@ -57,11 +56,12 @@ services:
     container_name: sdrs-borrower-service
     command: /usr/local/bin/borrower-service
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: sdrs_db
-      DB_USER: sdrs_user
-      DB_PASSWORD: sdrs_pass
+      SDRS_USE_DATABASE: "1"
+      SDRS_DB_HOST: postgres
+      SDRS_DB_PORT: 5432
+      SDRS_DB_NAME: sdrs_db
+      SDRS_DB_USER: sdrs_user
+      SDRS_DB_PASSWORD: sdrs_pass
     ports:
       - "8081:8081"
     networks:
@@ -84,11 +84,12 @@ services:
     container_name: sdrs-risk-assessment
     command: /usr/local/bin/risk-assessment-service
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: sdrs_db
-      DB_USER: sdrs_user
-      DB_PASSWORD: sdrs_pass
+      SDRS_USE_DATABASE: "1"
+      SDRS_DB_HOST: postgres
+      SDRS_DB_PORT: 5432
+      SDRS_DB_NAME: sdrs_db
+      SDRS_DB_USER: sdrs_user
+      SDRS_DB_PASSWORD: sdrs_pass
     ports:
       - "8082:8082"
     networks:
@@ -111,11 +112,12 @@ services:
     container_name: sdrs-recovery-strategy
     command: /usr/local/bin/recovery-strategy-service
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: sdrs_db
-      DB_USER: sdrs_user
-      DB_PASSWORD: sdrs_pass
+      SDRS_USE_DATABASE: "1"
+      SDRS_DB_HOST: postgres
+      SDRS_DB_PORT: 5432
+      SDRS_DB_NAME: sdrs_db
+      SDRS_DB_USER: sdrs_user
+      SDRS_DB_PASSWORD: sdrs_pass
     ports:
       - "8083:8083"
     networks:
@@ -138,11 +140,12 @@ services:
     container_name: sdrs-communication
     command: /usr/local/bin/communication-service
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: sdrs_db
-      DB_USER: sdrs_user
-      DB_PASSWORD: sdrs_pass
+      SDRS_USE_DATABASE: "1"
+      SDRS_DB_HOST: postgres
+      SDRS_DB_PORT: 5432
+      SDRS_DB_NAME: sdrs_db
+      SDRS_DB_USER: sdrs_user
+      SDRS_DB_PASSWORD: sdrs_pass
     ports:
       - "8084:8084"
     networks:

@@ -195,7 +195,7 @@ RiskAssessment RiskScorer::assessRisk(const RiskFeatures& features)
 
 std::vector<double> RiskScorer::extractFeatures(const RiskFeatures& input) const
 {
-    constexpr size_t EXPECTED_FEATURE = 8;
+    constexpr size_t EXPECTED_FEATURE = 9;  // Updated: added Age
 
     std::vector<double> features = {
         static_cast<double>(input.daysPastDue),
@@ -204,6 +204,7 @@ std::vector<double> RiskScorer::extractFeatures(const RiskFeatures& input) const
         input.interestRate,
         input.monthlyIncome.getAmount(),
         static_cast<double>(input.accountAgeMonths),
+        static_cast<double>(input.age),  // NEW: Age feature
         encodeEmploymentStatus(input.employmentStatus),
         encodeAccountStatus(input.accountStatus)
     };
@@ -220,8 +221,15 @@ std::vector<double> RiskScorer::normalizeFeatures(const std::vector<double>& raw
 {
     std::vector<double> normalized;
     std::vector<double> maxVals = {
-        MAX_DAYS_PAST_DUE, MAX_MISSED_PAYMENTS, MAX_REMAINING_BALANCE_RATIO,
-        MAX_INTEREST_RATE, MAX_MONTHLY_INCOME, MAX_LOAN_TERM, MAX_EMPLOYMENT_RISK_SCORE, MAX_ACCOUNT_STATUS_RISK_SCORE
+        MAX_DAYS_PAST_DUE,         // [0] days_past_due
+        MAX_MISSED_PAYMENTS,        // [1] missed_payments
+        MAX_REMAINING_BALANCE_RATIO,// [2] debt_ratio
+        MAX_INTEREST_RATE,          // [3] interest_rate
+        MAX_MONTHLY_INCOME,         // [4] monthly_income
+        MAX_LOAN_TERM,              // [5] account_age_months (in months, so MAX_LOAN_TERM=120 is appropriate)
+        100.0,                      // [6] age (max 100 years)
+        MAX_EMPLOYMENT_RISK_SCORE,  // [7] employment_status (encoded)
+        MAX_ACCOUNT_STATUS_RISK_SCORE// [8] account_status (encoded)
     };
     for (size_t i = 0; i < raw.size(); ++i)
     {
@@ -261,6 +269,50 @@ double RiskScorer::calculateRuleBasedScore(const RiskFeatures& features) const
     double debtRatio = features.remainingAmount.getAmount() / (features.loanAmount.getAmount() + 1e-6);
     score += debtRatio * 0.20;
     
+    // If no income (0 VND) and has debt -> VERY HIGH RISK
+    double monthlyIncome = features.monthlyIncome.getAmount();
+    // Calculate minimum monthly payment: (remaining * (1 + interest)) / 12 months
+    double monthlyPaymentRequired = features.remainingAmount.getAmount() * (1.0 + features.interestRate) / 12.0;
+    
+    if (monthlyIncome <= 0 && features.remainingAmount.getAmount() > 0) {
+        // No income + has debt = cannot repay!
+        score += 0.35;  // Major risk factor
+    } else if (monthlyIncome > 0) {
+        // Debt-to-Income ratio (monthly payment / monthly income)
+        double dti = monthlyPaymentRequired / (monthlyIncome + 1e-6);
+        if (dti > 0.5) {
+            score += 0.25;  // Payment > 50% of income
+        } else if (dti > 0.35) {
+            score += 0.15;  // Payment 35-50% of income
+        } else if (dti > 0.20) {
+            score += 0.10;  // Payment 20-35% of income (borderline)
+        } else if (dti > 0.10) {
+            score += 0.05;  // Payment 10-20% of income (manageable)
+        }
+        // dti <= 0.10 is very healthy, no additional risk
+    }
+    
+    // Age factor: younger borrowers (18-25) and older borrowers (65+) have higher risk
+    if (features.age > 0) {
+        if (features.age < 25) {
+            score += 0.10;  // Young, less financial stability
+        } else if (features.age >= 65) {
+            score += 0.08;  // Older, income concerns
+        } else if (features.age >= 35 && features.age <= 50) {
+            score -= 0.05;  // Prime working age, lower risk
+        }
+    }
+    
+    // Account age factor: new accounts are riskier
+    if (features.accountAgeMonths > 0) {
+        if (features.accountAgeMonths < 3) {
+            score += 0.10;  // Very new account (< 3 months)
+        } else if (features.accountAgeMonths < 6) {
+            score += 0.05;  // New account (3-6 months)
+        }
+        // 6+ months is established, no additional risk
+    }
+    
     score += getEmploymentRiskContribution(features.employmentStatus);
     score += getAccountRiskContribution(features.accountStatus);
     
@@ -280,7 +332,7 @@ void RiskScorer::trainModel()
     
     std::vector<std::vector<double>> X;
     std::vector<double> y;
-    generateSyntheticData(X, y, 100);
+    generateSyntheticData(X, y, 5000);  // Increased to 5000 samples for better model generalization
     
     std::vector<std::vector<double>> X_normalized;
     X_normalized.reserve(X.size());
@@ -308,12 +360,41 @@ void RiskScorer::generateSyntheticData(
 
     for (int i = 0; i < numSamples; ++i)
     {
-        std::vector<double> features(8);
+        std::vector<double> features(9);  // Updated: 9 features including Age
         double riskScore;
 
         double scenario = uniform(rng);
         
-        if (scenario < 0.30)
+        // EDGE CASE SCENARIOS (10% of data) - Critical for production safety
+        if (scenario < 0.10)
+        {
+            // Zero or very low income with debt
+            features[0] = uniform(rng) * 30.0;  // 0-30 days past due
+            
+            features[1] = (uniform(rng) < 0.5) ? 0.0 : std::floor(uniform(rng) * 2.0);
+            
+            features[2] = 0.7 + uniform(rng) * 0.25;  // High debt ratio
+            
+            features[3] = 0.12 + uniform(rng) * 0.10;
+            
+            // Zero or minimal income (0-500k VND)
+            features[4] = uniform(rng) * 500000.0;
+            
+            // Very new accounts (0-6 months)
+            features[5] = uniform(rng) * 6.0;
+            
+            // Age (risky profiles - young or retirement age)
+            features[6] = (uniform(rng) < 0.5) ? 20.0 + uniform(rng) * 5.0 : 60.0 + uniform(rng) * 10.0;
+            
+            features[7] = (uniform(rng) < 0.7) ? 0.0 : 0.5;  // Mostly unemployed
+            
+            features[8] = (uniform(rng) < 0.6) ? 0.4 : 0.6;  // Delayed/Delinquent
+            
+            // HIGH RISK for zero/low income cases
+            riskScore = 0.70 + uniform(rng) * 0.25;
+        }
+        // LOW RISK (40% of data) - Healthy borrowers
+        else if (scenario < 0.50)
         {
             features[0] = uniform(rng) * 15.0;
             
@@ -323,17 +404,21 @@ void RiskScorer::generateSyntheticData(
             
             features[3] = 0.05 + uniform(rng) * 0.07;
             
-            features[4] = 4000.0 + uniform(rng) * 4000.0;
+            features[4] = 4000000.0 + uniform(rng) * 4000000.0;  // Good income (4-8M VND)
             
             features[5] = 12.0 + uniform(rng) * 36.0;
             
-            features[6] = (uniform(rng) < 0.9) ? 1.0 : 0.5;
+            // Prime working age (30-50)
+            features[6] = 30.0 + uniform(rng) * 20.0;
             
-            features[7] = 1.0;
+            features[7] = (uniform(rng) < 0.9) ? 1.0 : 0.5;
+            
+            features[8] = 1.0;
             
             riskScore = 0.05 + uniform(rng) * 0.25;
         }
-        else if (scenario < 0.70)
+        // MEDIUM RISK (30% of data) - Average borrowers
+        else if (scenario < 0.80)
         {
             features[0] = 15.0 + uniform(rng) * 45.0;
 
@@ -343,17 +428,22 @@ void RiskScorer::generateSyntheticData(
 
             features[3] = 0.12 + uniform(rng) * 0.08;
 
-            features[4] = 2500.0 + uniform(rng) * 2000.0;
+            features[4] = 2500000.0 + uniform(rng) * 2000000.0;  // Medium income (2.5-4.5M VND)
 
             features[5] = 6.0 + uniform(rng) * 18.0;
 
-            double emp = uniform(rng);
-            features[6] = (emp < 0.5) ? 1.0 : 0.5;
+            // Working age
+            features[6] = 25.0 + uniform(rng) * 35.0;
 
-            features[7] = (uniform(rng) < 0.7) ? 1.0 : 0.8;
+            double emp = uniform(rng);
+            features[7] = (emp < 0.5) ? 1.0 : 0.5;
+
+            features[8] = (uniform(rng) < 0.7) ? 1.0 : 0.8;
 
             riskScore = 0.30 + uniform(rng) * 0.35;
         }
+        // HIGH RISK (20% of data) - Problem accounts
+        // HIGH RISK (20% of data) - Problem accounts
         else
         {
             features[0] = 60.0 + uniform(rng) * 120.0;
@@ -364,17 +454,20 @@ void RiskScorer::generateSyntheticData(
 
             features[3] = 0.18 + uniform(rng) * 0.12;
 
-            features[4] = 1000.0 + uniform(rng) * 2000.0;
+            features[4] = 1000000.0 + uniform(rng) * 2000000.0;  // Low income (1-3M VND)
 
             features[5] = 3.0 + uniform(rng) * 15.0;
 
+            // Broad age range
+            features[6] = 20.0 + uniform(rng) * 50.0;
+
             double emp = uniform(rng);
-            features[6] = (emp < 0.6) ? 0.0 : 0.5;
+            features[7] = (emp < 0.6) ? 0.0 : 0.5;
 
             double status = uniform(rng);
-            if (status < 0.4) features[7] = 0.0;
-            else if (status < 0.7) features[7] = 0.4;
-            else features[7] = 0.6;
+            if (status < 0.4) features[8] = 0.0;
+            else if (status < 0.7) features[8] = 0.4;
+            else features[8] = 0.6;
 
             riskScore = 0.65 + uniform(rng) * 0.30;
         }

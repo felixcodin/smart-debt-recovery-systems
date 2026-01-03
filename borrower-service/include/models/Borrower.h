@@ -10,6 +10,15 @@
 namespace sdrs::borrower
 {
 
+// Risk segmentation based on K-Means clustering
+enum class RiskSegment
+{
+    Unclassified,  // Not yet clustered
+    Low,           // Cluster 0 - Low risk borrowers
+    Medium,        // Cluster 1 - Medium risk borrowers
+    High           // Cluster 2 - High risk borrowers
+};
+
 class Borrower
 {
 private:
@@ -27,6 +36,7 @@ private:
     double _monthlyIncome = 0.0;
     sdrs::constants::InactiveReason _inactiveReason = sdrs::constants::InactiveReason::None;
     std::chrono::sys_seconds _inactivatedAt;
+    RiskSegment _riskSegment = RiskSegment::Unclassified;  // K-Means cluster assignment
 
 public:
     Borrower() = delete;
@@ -44,6 +54,7 @@ public:
     void setFirstName(const std::string& fname);
     void setLastName(const std::string& lname);
     void setEmploymentStatus(sdrs::constants::EmploymentStatus status);
+    void assignSegment(RiskSegment segment);  // Assign K-Means cluster
 
 public:
     int getId() const;
@@ -61,6 +72,8 @@ public:
     double getMonthlyIncome() const;
     std::chrono::year_month_day getDateOfBirth() const;
     std::string getDateOfBirthString() const;  // Returns YYYY-MM-DD format
+    int getAge() const;  // Calculate age from date of birth
+    RiskSegment getRiskSegment() const;  // Get K-Means cluster assignment
     sdrs::constants::EmploymentStatus getEmploymentStatus() const;
 
     // Business rule checks
