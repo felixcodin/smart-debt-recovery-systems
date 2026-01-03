@@ -64,3 +64,6 @@ graph_info.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Pycache
+__pycache__/
